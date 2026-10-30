@@ -21,3 +21,7 @@ simulation/data/logs/
 Thumbs.db
 
 node_modules/
+
+# Claude Code yerel ayarları
+.claude/launch.json
+.claude/settings.local.json

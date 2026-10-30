@@ -1,0 +1,53 @@
+{
+  "id": "macka-altindere",
+  "title": "Trabzon / Maçka – Altındere Vadisi",
+  "description": "Sümela çevresindeki Altındere Vadisi ormanı",
+  "bbox": { "south": 40.660, "west": 39.600, "north": 40.740, "east": 39.720 },
+  "pad_ratio": 0.10,
+  "camera": { "center": [39.66678, 40.69706], "zoom": 12.8, "pitch": 60, "bearing": -49 },
+  "map": {
+    "min_zoom": 11,
+    "max_zoom": 16,
+    "terrain_exaggeration": 1.3,
+    "imagery_saturation": -0.3
+  },
+  "prefetch": { "dem_zooms": [9, 15], "imagery_zooms": [9, 16], "low_zoom_border": 1 },
+  "nodes_file": "nodes.json",
+  "layout": {
+    "seed": 2026,
+    "dem_zoom": 13,
+    "virtual_count": 16,
+    "min_spacing_m": 600,
+    "f2_distance_m": [300, 500],
+    "min_elevation_m": 50,
+    "edge_margin_m": 250,
+    "target_hops": [5, 9],
+    "attempts": 400
+  },
+  "mesh": {
+    "range_m": 2500,
+    "weak_ratio": 0.8,
+    "weak_penalty_km": 0.5,
+    "mast_m": 4,
+    "freq_mhz": 868,
+    "los": {
+      "enabled": false,
+      "fresnel_clearance": 0.6,
+      "k_factor": 1.3333,
+      "short_link_m": 800,
+      "blocked_penalty_km": 1.0,
+      "step_m": 30
+    },
+    "lora": {
+      "sf": 9,
+      "bw_hz": 125000,
+      "cr": 1,
+      "preamble": 8,
+      "crc": true,
+      "explicit_header": true,
+      "payload_bytes": 24,
+      "processing_ms": 20
+    },
+    "hop_animation_ms": 600
+  }
+}

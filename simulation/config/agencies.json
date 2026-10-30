@@ -1,0 +1,9 @@
+{
+  "note": "Kurum bildirimleri SİMÜLASYONDUR. Gerçek kurumlarla hiçbir iletişim kurulmaz.",
+  "deliver_after_s": 0.8,
+  "agencies": [
+    { "id": "ogm", "name": "OGM", "detail": "Orman Genel Müdürlüğü – bölge orman işletmesi", "offset_s": 0.3 },
+    { "id": "itfaiye", "name": "İtfaiye", "detail": "İlçe itfaiye amirliği", "offset_s": 0.6 },
+    { "id": "muhtarlik", "name": "Muhtarlık", "detail": "En yakın mahalle muhtarlığı", "offset_s": 0.9 }
+  ]
+}
