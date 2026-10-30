@@ -108,6 +108,12 @@ def test_generated_layout_meets_rules():
     path, _ = shortest_path(links, "F1", "MERKEZ")
     assert path[:2] == ["F1", "F2"] and 5 <= len(path) - 1 <= 9
     assert path == data["checks"]["route"]
+    los = area["mesh"]["los"]
+    for l in links:
+        assert l.distance_m <= area["mesh"]["range_m"]
+        if l.kind == "lora" and los["enabled"]:
+            # görüş hattı kuralı: açık ya da engelli ama ≤ 800 m (zayıf, cezalı)
+            assert l.los == "clear" or (l.los == "blocked" and l.distance_m <= los["short_link_m"] and l.weak)
 
 
 def test_every_route_node_can_be_bypassed():

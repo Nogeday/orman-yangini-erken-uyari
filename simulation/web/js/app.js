@@ -36,12 +36,15 @@ async function main() {
     return res;
   };
 
+  let map = null;
+  let layer = 'imagery';
   const actions = {
     trigger: () => post('/api/demo/trigger').then(report),
     reset: () => post('/api/reset').then(report),
     silence: (target) => post('/api/command', { target: Number(target), cmd: 'silence' }).then(report),
     closeIncident: (id) => post(`/api/incident/${id}/close`).then(report),
     resetView: () => map.frame(true),
+    setLayer: (name) => { layer = name; if (map) map.setBaseLayer(name); },
   };
 
   const ui = new UI(config, store, actions);
@@ -53,9 +56,9 @@ async function main() {
     onTileStatus: (bad) => ui.setMapStatus(bad ? 'Harita karosu çevrimdışı — bu alan önbellekte yok (prefetch_tiles.py)' : ''),
   };
   // WebGL yoksa (GPU hızlandırma kapalı) harita açılamaz; paneller ve olay akışı yine çalışmalı.
-  let map;
   try {
     map = new MeshMap(document.getElementById('map'), config, mapHooks);
+    map.setBaseLayer(layer);
   } catch (err) {
     console.error(err);
     map = new Proxy({}, { get: () => () => {} });

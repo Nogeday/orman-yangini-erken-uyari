@@ -222,3 +222,57 @@ def test_replay_source_plays_recording_timing(engine_factory):
     run(engine, clock, 0.4, step=0.05)
     assert engine.nodes["F1"].status() == "GAZ" and "REPLAY" in engine.nodes["F1"].badges()
     assert engine.incidents.active()[0].tag == "REPLAY"
+
+
+def test_demo_trigger_right_after_start_still_alarms(engine_factory):
+    """Sunucu açılır açılmaz (sanal F1 açılmadan) basılan tetik de alarm üretmeli."""
+    engine, clock, events = engine_factory()
+    engine.start_demo()
+    run(engine, clock, 0.5)
+    engine.trigger_lighter()
+    track = _alarm_track(engine, clock, 4.0)
+    assert track and track[0][1] == 1
+    assert len(of(events, "incident_created")) == 1
+
+
+def test_telegram_notification_goes_only_to_team_chat(app_config):
+    """İsteğe bağlı Telegram: MERKEZ olayı alınca ekibin sohbetine tek mesaj; sonuç olaya yazılır."""
+    import asyncio
+    import json as _json
+
+    import httpx
+
+    from server.notify import TelegramNotifier, make_notifier
+    from server.state import Engine, FakeClock
+
+    assert make_notifier({}, "x") is None                          # .env yoksa özellik kapalı
+    sent = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append((str(request.url), _json.loads(request.content)))
+        return httpx.Response(200, json={"ok": True, "result": {"message_id": 1}})
+
+    async def scenario():
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        notifier = TelegramNotifier("123:ABC", "-100200", app_config.area.title, client=client)
+        clock = FakeClock(start=0.0)
+        events = []
+        engine = Engine(app_config, clock=clock, emit=events.append, notifier=notifier)
+        notifier.bind(engine)
+        engine.ingest_line(tel(1, 1000, alarm=1, gas=1100, kind="event"), HW)
+        for _ in range(int(10 / 0.02)):
+            clock.advance(0.02)
+            engine.tick()
+        await asyncio.sleep(0.05)
+        await client.aclose()
+        return engine
+
+    engine = asyncio.run(scenario())
+    assert len(sent) == 1
+    url, body = sent[0]
+    assert url == "https://api.telegram.org/bot123:ABC/sendMessage" and body["chat_id"] == "-100200"
+    text = body["text"]
+    assert "Olay 001" in text and "GAZ" in text and "google.com/maps?q=40.664129,39.716558" in text
+    assert "simülasyondur" in text
+    inc = engine.incidents.active()[0]
+    assert inc.notify["telegram"]["ok"] and inc.notify["telegram"]["text"] == "gönderildi"

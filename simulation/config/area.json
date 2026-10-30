@@ -31,7 +31,7 @@
     "mast_m": 4,
     "freq_mhz": 868,
     "los": {
-      "enabled": false,
+      "enabled": true,
       "fresnel_clearance": 0.6,
       "k_factor": 1.3333,
       "short_link_m": 800,

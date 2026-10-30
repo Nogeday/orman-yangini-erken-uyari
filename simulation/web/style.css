@@ -80,7 +80,13 @@ body {
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; min-height: 0; }
 .map-wrap { position: relative; min-width: 0; min-height: 0; background: var(--bg); }
 #map { position: absolute; inset: 0; }
-.map-btn { position: absolute; top: 10px; left: 10px; z-index: 2; }
+.map-tools { position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; gap: 8px; }
+.seg { display: flex; }
+.seg .btn { border-radius: 0; }
+.seg .btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.seg .btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; margin-left: -1px; }
+.seg .btn[aria-pressed="true"] { border-color: var(--route); position: relative; }
+.seg .btn[aria-pressed="false"] { color: var(--muted); }
 .map-status {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2;
   padding: 4px 10px; font-size: 12px; color: var(--warn);
@@ -267,6 +273,8 @@ body {
   border: 1px solid var(--line); border-radius: var(--radius);
 }
 .maplibregl-ctrl-attrib a { color: var(--muted); }
+/* atıflar sol alttaki lejantın altına girmesin: harita genişliği − lejant */
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib { max-width: calc(100vw - 360px - 290px); }
 
 @media (prefers-reduced-motion: reduce) {
   .mk.is-alarm::after { animation: none; transform: scale(1.5); opacity: 0.8; }

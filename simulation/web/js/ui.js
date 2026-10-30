@@ -41,16 +41,24 @@ export class UI {
       incSection: document.getElementById('sec-incident'),
       log: document.getElementById('log'),
       mapStatus: document.getElementById('map-status'),
-      range: document.getElementById('lg-range'),
+      linkLegend: document.getElementById('lg-link'),
     };
     this.el.area.textContent = config.area.title;
-    this.el.range.textContent = (config.mesh.range_m / 1000).toLocaleString('tr-TR');
+    const km = (config.mesh.range_m / 1000).toLocaleString('tr-TR');
+    this.el.linkLegend.textContent = `Link: ≤ ${km} km${config.mesh.los ? ' + görüş hattı' : ''} — simüle`;
     this.selectedIncident = null;
     this.silenceSent = new Set();
     this.buildCards();
     document.getElementById('btn-trigger').addEventListener('click', () => actions.trigger());
     document.getElementById('btn-reset').addEventListener('click', () => actions.reset());
     document.getElementById('btn-view').addEventListener('click', () => actions.resetView());
+    this.layerButtons = [...document.querySelectorAll('[data-layer]')];
+    for (const btn of this.layerButtons) {
+      btn.addEventListener('click', () => this.setLayer(btn.dataset.layer, true));
+    }
+    let saved = null;
+    try { saved = localStorage.getItem('orman.katman'); } catch { /* gizli pencere vb. */ }
+    this.setLayer(saved === 'topo' ? 'topo' : 'imagery', false);
     this.el.incident.addEventListener('click', (ev) => {
       const btn = ev.target.closest('[data-act]');
       if (!btn) return;
@@ -113,6 +121,14 @@ export class UI {
     this.drawSpark();
   }
 
+  setLayer(name, remember) {
+    for (const btn of this.layerButtons) btn.setAttribute('aria-pressed', String(btn.dataset.layer === name));
+    this.actions.setLayer(name);
+    if (remember) {
+      try { localStorage.setItem('orman.katman', name); } catch { /* yoksay */ }
+    }
+  }
+
   setMapStatus(text) {
     this.el.mapStatus.hidden = !text;
     this.el.mapStatus.textContent = text || '';
@@ -124,7 +140,7 @@ export class UI {
       <article class="node-card" data-node="${esc(n.id)}" data-status="BAGLANTI_YOK">
         <header>
           <span class="node-chip">${esc(n.id)}</span>
-          <span class="node-title">${esc(n.rol === 'sensor' ? 'Saha düğümü' : 'Köprü düğümü')}</span>
+          <span class="node-title">${esc(n.rol === 'sensor' ? 'Saha düğümü' : 'Köprü')}</span>
           <span class="badges" data-badges></span>
           <span class="node-status" data-status-text>BAĞLANTI YOK</span>
         </header>

@@ -83,3 +83,14 @@ def test_real_cached_dem_matches_layout_elevations():
     for n in data["nodes"]:
         assert grid.elevation(n["lat"], n["lon"]) == pytest.approx(n["rakim_m"], abs=1.0)
         assert 300 < n["rakim_m"] < 3500                    # Doğu Karadeniz dağları, deniz değil
+    # nodes.json'daki her LoRa linkinin görüş hattı durumu aynı DEM'den birebir yeniden üretilir
+    from server import mesh
+
+    nodes = {n["id"]: n for n in data["nodes"]}
+    for l in data["links"]:
+        if l["kind"] != "lora" or l["los"] == "unchecked":
+            continue
+        a, b = nodes[l["a"]], nodes[l["b"]]
+        res = mesh.los_check(grid.profile(a["lat"], a["lon"], b["lat"], b["lon"], 30.0),
+                             a["rakim_m"] + a["direk_m"], b["rakim_m"] + b["direk_m"], 868e6)
+        assert res.clear == (l["los"] == "clear"), (l["a"], l["b"])

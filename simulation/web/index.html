@@ -25,13 +25,19 @@
   <main class="layout">
     <section class="map-wrap" aria-label="Gerçek DEM üzerinde 3B arazi ve mesh ağı">
       <div id="map"></div>
-      <button id="btn-view" class="btn btn-small map-btn" type="button">Görünümü sıfırla</button>
+      <div class="map-tools">
+        <button id="btn-view" class="btn btn-small" type="button">Görünümü sıfırla</button>
+        <div class="seg" role="group" aria-label="Harita katmanı">
+          <button class="btn btn-small" type="button" data-layer="imagery" aria-pressed="true">Uydu</button>
+          <button class="btn btn-small" type="button" data-layer="topo" aria-pressed="false">Topo</button>
+        </div>
+      </div>
       <div id="map-status" class="map-status" hidden></div>
       <ul class="legend" aria-label="Lejant">
         <li><span class="lg lg-square"></span>Fiziksel düğüm (F1, F2)</li>
         <li><span class="lg lg-circle"></span>Sanal LoRa düğümü — simüle</li>
         <li><span class="lg lg-center"></span>MERKEZ (gözetleme ve komuta)</li>
-        <li><span class="lg lg-link"></span>Link: ≤ <span id="lg-range">2.5</span> km — simüle</li>
+        <li><span class="lg lg-link"></span><span id="lg-link">Link: ≤ 2,5 km — simüle</span></li>
         <li><span class="lg lg-route"></span>Aktif rota → MERKEZ</li>
       </ul>
     </section>

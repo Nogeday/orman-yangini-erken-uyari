@@ -448,11 +448,14 @@ class DemoNetwork:
             self.bridge.check_link(self.ms)
 
     def trigger_lighter(self) -> bool:
-        """Çakmak gazı. Döner: MQ ısınması atlandı mı."""
-        skipped = self.f1.is_warming(self._f1_time())
+        """Çakmak gazı. Döner: MQ ısınması atlandı mı.
+        Sanal F1 henüz açılmadıysa gaz, açılıştan 300 ms sonra gelir: firmware tabanı açılışta ölçer;
+        taban gazın içinde ölçülürse (gerçek sensörde de) alarm hiç oluşmaz."""
+        now = self._f1_time()
+        skipped = self.f1.is_warming(max(now, self.f1_offset))
         if skipped:
             self.f1.skip_warmup()
-        self.env1.lighter(self._f1_time() / 1000.0)
+        self.env1.lighter(max(now, self.f1_offset + 300) / 1000.0)
         return skipped
 
     def scenario_finished(self) -> bool:

@@ -151,6 +151,14 @@ Diğer bayraklar: `--baud 115200`, `--http-port 8000` (doluysa sonraki boş port
 `--no-browser`, `--area <bölge.json>`, `--no-log`. Her oturumun ham satırları
 `simulation/data/logs/oturum-YYYYMMDD-HHMMSS.jsonl` dosyasına yazılır ve aynı `--replay-file` ile yeniden oynatılabilir.
 
+Harita köşesindeki **Uydu | Topo** düğmesi taban katmanı değiştirir (seçim tarayıcıda hatırlanır). Topo katmanı
+(OpenTopoMap) varsayılan önbelleğe alınmaz; çevrimdışı gerekiyorsa `prefetch_tiles.py --layers dem,imagery,topo`.
+
+**İsteğe bağlı Telegram bildirimi:** `simulation/.env.example` dosyasını `simulation/.env` olarak kopyalayıp ekibin
+kendi bot token'ını ve sohbet kimliğini yazın. MERKEZ bir olayı aldığında başlık, kaynak, koordinat + Google Maps
+bağlantısı, rakım, alarm tipi ve saat bu sohbete gider; olay panelinde “Telegram: gönderildi / hata” görünür.
+Değişkenler yoksa özellik kapalıdır.
+
 **Simüle Çakmak Tetikle** her modda çalışır ve aynı ayrıştırıcıdan, aynı olay akışından geçer. Donanım bağlıyken
 F1'in yerine ~45 s'lik geçici bir sanal F1 koşar; kayıtta ve kartta **SİMÜLE** yazar. Bu sırada gerçek F1'den alarm
 gelirse simülasyon hemen durur.
@@ -238,10 +246,13 @@ uzaklıktaki komşularına bağlanır. Prototipte elimizdeki **nRF24L01+PA+LNA**
 eleme, ACK içinde geri komut kanalı ve bağlantı kopması tespiti radyodan bağımsızdır; LoRa modülüne geçişte
 değişen yalnızca radyo sürücüsüdür.
 
-**Mesh modeli varsayımları.** İki sanal düğüm arasında mesafe ≤ 2.5 km ise link vardır (isteğe bağlı olarak DEM
-profilinde görüş hattı: 4 m direk, 1. Fresnel bölgesinin %60'ı açık, k = 4/3; `area.json → mesh.los.enabled`).
+**Mesh modeli varsayımları.** İki LoRa düğümü arasında link için iki koşul vardır: mesafe ≤ 2.5 km **ve** DEM
+profilinde görüş hattı — 4 m direk tepesinden direk tepesine çizgi, 868 MHz'te 1. Fresnel bölgesinin %60'ı açık,
+dünya eğriliği k = 4/3. Engelli bir link ancak ≤ 800 m ise (kırınım payı) cezalı “zayıf” link olarak kalır.
 Link maliyeti mesafe (km) + zayıf linklere ceza; rota Dijkstra ile MERKEZ'e hesaplanır, bir düğüm kapatılınca
 yeniden hesaplanır. Çakışma, gürültü, yeniden iletim ve 868 MHz bandının %1 görev döngüsü modellenmez.
+Bu vadide görüş hattı belirleyicidir: yalnızca mesafeye göre kurulan ilk ağda 4 m direkle 38 linkin 12'si görüş
+hattını geçiyordu; bu yüzden düğümler görünürlük grafı üzerinden yerleştirildi (`area.json → mesh.los.enabled`).
 
 **Gecikme modeli.** Hop başına süre Semtech AN1200.13 hava süresi formülünden hesaplanır: SF9, 125 kHz, CR 4/5,
 8 sembol önsöz, CRC açık, 24 bayt yük → **205.8 ms** (+20 ms işlem). Panelde “Hesaplanan ağ gecikmesi: … ms —
@@ -251,8 +262,10 @@ Ekrandaki diğer tüm sayılar F1/F2'den **ölçülür** (sıcaklık, nem, gaz, 
 
 **Gerçek arazi.** Düğümler `simulation/tools/generate_layout.py` ile AWS Terrain Tiles DEM'inden deterministik
 olarak yerleştirilir: sırt hücreleri (çevresinden yüksek, yerel maksimum), vadi tabanı ve çukurlar hariç, ≥ 600 m
-aralık, bağlı graf, her sanal düğümün ≥ 2 komşusu, F1 → MERKEZ 5–9 hop. Başka bölge için yeni bir `area.json`
-yazıp `--area` ile verin; `nodes.json` yoksa sunucu üretir.
+aralık, bağlı graf, her sanal düğümün ≥ 2 komşusu, F1 → MERKEZ 5–9 hop; F2 → MERKEZ omurgası görüş hattı grafı
+üzerinde aranır ve rotadaki her sanal düğüm için iki komşusunu da gören bir yedek düğüm eklenir. Her linkin görüş
+hattı durumu `nodes.json`'a yazılır ve testte aynı DEM'den yeniden doğrulanır. Başka bölge için yeni bir
+`area.json` yazıp `--area` ile verin; `nodes.json` yoksa sunucu üretir (~40 s).
 
 **Veri kaynakları ve atıflar** (haritada görünür):
 - Yükseklik: [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Mapzen; SRTM, GMTED2010, ETOPO1 ve diğerleri), Terrarium kodlaması
@@ -272,28 +285,26 @@ Rakımlar DEM'den (z13), direk yüksekliği tüm düğümlerde 4 m.
 | ID | Tür | Enlem | Boylam | Rakım (m) | Komşu | Donanım |
 |---|---|---:|---:|---:|---:|---|
 | F1 | fiziksel | 40.664129 | 39.716558 | 2242 | 1 | ESP32-S + nRF24 (prototip) |
-| F2 | fiziksel | 40.663869 | 39.710722 | 2284 | 4 | ESP32 DevKit V1 + nRF24 (prototip) |
-| N01 | sanal | 40.666994 | 39.693899 | 2330 | 3 | LoRa SX1262 (konsept) |
-| N02 | sanal | 40.674025 | 39.694585 | 2417 | 5 | LoRa SX1262 (konsept) |
-| N03 | sanal | 40.682877 | 39.697675 | 2300 | 5 | LoRa SX1262 (konsept) |
-| N04 | sanal | 40.691208 | 39.702139 | 2093 | 4 | LoRa SX1262 (konsept) |
-| N05 | sanal | 40.689646 | 39.675016 | 1806 | 6 | LoRa SX1262 (konsept) |
-| N06 | sanal | 40.707086 | 39.687719 | 2079 | 4 | LoRa SX1262 (konsept) |
-| N07 | sanal | 40.690427 | 39.657507 | 1505 | 2 | LoRa SX1262 (konsept) |
-| N08 | sanal | 40.713592 | 39.679479 | 1923 | 4 | LoRa SX1262 (konsept) |
-| N09 | sanal | 40.703702 | 39.664716 | 1655 | 6 | LoRa SX1262 (konsept) |
-| N10 | sanal | 40.714893 | 39.650297 | 1021 | 5 | LoRa SX1262 (konsept) |
-| N11 | sanal | 40.722959 | 39.659566 | 1552 | 4 | LoRa SX1262 (konsept) |
-| N12 | sanal | 40.703962 | 39.625578 | 1909 | 5 | LoRa SX1262 (konsept) |
-| N13 | sanal | 40.718016 | 39.639310 | 1157 | 5 | LoRa SX1262 (konsept) |
-| N14 | sanal | 40.706045 | 39.613561 | 1585 | 3 | LoRa SX1262 (konsept) |
-| N15 | sanal | 40.710729 | 39.618711 | 1797 | 5 | LoRa SX1262 (konsept) |
-| N16 | sanal | 40.713852 | 39.603605 | 1322 | 4 | LoRa SX1262 (konsept) |
+| F2 | fiziksel | 40.663869 | 39.710722 | 2284 | 3 | ESP32 DevKit V1 + nRF24 (prototip) |
+| N01 | sanal | 40.670379 | 39.702139 | 2417 | 3 | LoRa SX1262 (konsept) |
+| N02 | sanal | 40.675847 | 39.704885 | 2390 | 4 | LoRa SX1262 (konsept) |
+| N03 | sanal | 40.682617 | 39.690809 | 2433 | 4 | LoRa SX1262 (konsept) |
+| N04 | sanal | 40.691208 | 39.693899 | 2324 | 3 | LoRa SX1262 (konsept) |
+| N05 | sanal | 40.688344 | 39.686689 | 2212 | 5 | LoRa SX1262 (konsept) |
+| N06 | sanal | 40.695373 | 39.687719 | 2191 | 5 | LoRa SX1262 (konsept) |
+| N07 | sanal | 40.682096 | 39.650640 | 1743 | 2 | LoRa SX1262 (konsept) |
+| N08 | sanal | 40.704743 | 39.669180 | 1834 | 4 | LoRa SX1262 (konsept) |
+| N09 | sanal | 40.700319 | 39.663686 | 1495 | 6 | LoRa SX1262 (konsept) |
+| N10 | sanal | 40.703702 | 39.656477 | 1228 | 5 | LoRa SX1262 (konsept) |
+| N11 | sanal | 40.722959 | 39.659566 | 1552 | 3 | LoRa SX1262 (konsept) |
+| N12 | sanal | 40.709168 | 39.640684 | 1279 | 6 | LoRa SX1262 (konsept) |
+| N13 | sanal | 40.712291 | 39.631071 | 1558 | 5 | LoRa SX1262 (konsept) |
+| N14 | sanal | 40.725561 | 39.645147 | 1049 | 5 | LoRa SX1262 (konsept) |
+| N15 | sanal | 40.714633 | 39.624548 | 1719 | 3 | LoRa SX1262 (konsept) |
+| N16 | sanal | 40.723220 | 39.631757 | 1221 | 2 | LoRa SX1262 (konsept) |
 | MERKEZ | merkez | 40.729984 | 39.616994 | 1590 | 3 | LoRa SX1262 ağ geçidi + internet (konsept) |
 
-Varsayılan rota: F1 → F2 → N02 → N05 → N09 → N10 → N13 → MERKEZ (7 hop, 11.48 km). Sanal düğümler arası en küçük
-aralık 678.0 m; F1–F2 493.1 m; her sanal düğümün en az 2 komşusu var; rota üzerindeki 5 sanal düğümün her biri
-devre dışı kalınca alternatif yol bulunuyor.
+Varsayılan rota: F1 → F2 → N01 → N03 → N06 → N08 → N12 → N13 → N15 → MERKEZ (9 hop, 12.26 km). Sanal düğümler arası en küçük aralık 608.3 m; F1–F2 493.1 m; her sanal düğümün en az 2 komşusu var; rota üzerindeki sanal düğümlerin 7/7 tanesi devre dışı kalınca alternatif yol bulunuyor.
 
 ## Lisans
 

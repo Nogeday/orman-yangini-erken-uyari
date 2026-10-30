@@ -69,6 +69,10 @@ export class MeshMap {
           type: 'raster', tiles: [`${location.origin}/tiles/imagery/{z}/{x}/{y}`], tileSize: 256, maxzoom: 16,
           attribution: layers.imagery.attribution,
         },
+        topo: {
+          type: 'raster', tiles: [`${location.origin}/tiles/topo/{z}/{x}/{y}`], tileSize: 256, maxzoom: 16,
+          attribution: layers.topo.attribution,
+        },
         dem: dem(layers.dem.attribution),
         hillshade: dem(null),
       },
@@ -76,6 +80,10 @@ export class MeshMap {
         { id: 'zemin', type: 'background', paint: { 'background-color': COLOR.bg } },
         {
           id: 'uydu', type: 'raster', source: 'imagery',
+          paint: { 'raster-saturation': area.map.imagery_saturation, 'raster-fade-duration': 0 },
+        },
+        {
+          id: 'topo', type: 'raster', source: 'topo', layout: { visibility: 'none' },
           paint: { 'raster-saturation': area.map.imagery_saturation, 'raster-fade-duration': 0 },
         },
         {
@@ -121,6 +129,7 @@ export class MeshMap {
     // İşaretler eklendikten sonra: MapLibre işaretleri 'terrain' olayıyla arazi yüksekliğine oturtur.
     m.setTerrain({ source: 'dem', exaggeration: this.cfg.area.map.terrain_exaggeration });
     this.ready = true;
+    if (this.baseLayer) this.setBaseLayer(this.baseLayer);
     this.refreshLinks();
     this.setBaseRoute(this.baseRoute);
     this.frame(false);
@@ -141,6 +150,14 @@ export class MeshMap {
     if (this.prop) this.startLoop();
   }
 
+  // Taban katman: 'imagery' (Esri uydu) ya da 'topo' (OpenTopoMap). Topo varsayılan olarak önbelleğe alınmaz.
+  setBaseLayer(name) {
+    this.baseLayer = name === 'topo' ? 'topo' : 'imagery';
+    if (!this.ready) return;
+    this.map.setLayoutProperty('uydu', 'visibility', this.baseLayer === 'imagery' ? 'visible' : 'none');
+    this.map.setLayoutProperty('topo', 'visibility', this.baseLayer === 'topo' ? 'visible' : 'none');
+  }
+
   refreshMarkerPositions() {
     if (this.markerRaf) return;
     this.markerRaf = requestAnimationFrame(() => {
@@ -151,7 +168,7 @@ export class MeshMap {
 
   onError(e) {
     const src = e && e.sourceId;
-    if (src === 'imagery' || src === 'dem' || src === 'hillshade' || (e && e.tile)) {
+    if (src === 'imagery' || src === 'topo' || src === 'dem' || src === 'hillshade' || (e && e.tile)) {
       this.tileErrorUntil = Date.now() + 8000;
       this.hooks.onTileStatus(true);
       clearTimeout(this.tileTimer);
@@ -339,7 +356,9 @@ export class MeshMap {
       .map((l) => {
         const other = l.a === id ? l.b : l.a;
         const km = (l.distance_m / 1000).toFixed(1);
-        return `${esc(other)} ${km} km${off.has(other) ? ' (kapalı)' : ''}${l.kind === 'rf24' ? ' (nRF24)' : ''}`;
+        const notes = [l.kind === 'rf24' ? 'nRF24' : '', l.los === 'blocked' ? 'görüş engelli, kısa' : '',
+          off.has(other) ? 'kapalı' : ''].filter(Boolean);
+        return `${esc(other)} ${km} km${notes.length ? ` (${notes.join(', ')})` : ''}`;
       })
       .join(', ');
     const tur = { physical: 'Fiziksel — gerçek donanım', virtual: 'Sanal — simüle LoRa 868 MHz', center: 'Merkez — simüle' }[n.tur];

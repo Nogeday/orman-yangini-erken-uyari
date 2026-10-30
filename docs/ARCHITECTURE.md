@@ -129,7 +129,7 @@ sequenceDiagram
 | Konu | Model |
 |---|---|
 | Link | İki LoRa düğümü arası mesafe ≤ `range_m` (2500 m). F1 yalnızca köprüsü F2'ye bağlıdır (gerçek nRF24). |
-| Görüş hattı (isteğe bağlı) | DEM profili 30 m adımla; anten = zemin + 4 m direk; 868 MHz 1. Fresnel yarıçapı `√(λ·d1·d2/d)`; dünya kabarıklığı `d1·d2 / (2·k·R)`, k = 4/3. Açıklık < %60 Fresnel ise engelli: > 800 m ise link yok, daha kısaysa cezalı. `area.json → mesh.los.enabled`. |
+| Görüş hattı (varsayılan açık) | DEM profili 30 m adımla; anten = zemin + 4 m direk; 868 MHz 1. Fresnel yarıçapı `√(λ·d1·d2/d)`; dünya kabarıklığı `d1·d2 / (2·k·R)`, k = 4/3. Açıklık < %60 Fresnel ise engelli: > 800 m ise link yok, daha kısaysa cezalı. `area.json → mesh.los.enabled`. Sonuç linklerle birlikte `nodes.json`'a yazılır; sunucu çalışırken DEM gerekmez. |
 | Maliyet | `mesafe_km` + 0.5 (mesafe > %80 menzil, zayıf sinyal payı) + 1.0 (engelli kısa link). |
 | Rota | Dijkstra (kaynak → MERKEZ); devre dışı düğümler grafa alınmaz; eşitlikte düğüm kimliği. |
 | Gecikme | Semtech AN1200.13: `T_sym = 2^SF/BW`, `T_önsöz = (8 + 4.25)·T_sym`, `n_yük = 8 + max(⌈(8·PL − 4·SF + 28 + 16·CRC − 20·IH) / (4·(SF − 2·DE))⌉·(CR + 4), 0)`. SF9, 125 kHz, CR 4/5, 24 B → **205.8 ms** (+20 ms işlem). |
@@ -145,11 +145,16 @@ Modellenmeyenler (bilerek): eş zamanlı iletim çakışması, 868 MHz bandını
    Vadi tabanı ve çukurlar böylece elenir. Adaylar TPI sırasıyla 150 m'de bir seyreltilir.
 4. F1: güneydoğu köşesine yakın, MERKEZ köşesine en uzak sırt noktası. F2: F1'den 300–500 m, bbox merkezine
    doğru ±60° içindeki en yüksek sırt noktası. MERKEZ: kuzeybatı köşesinin 2.5 km'si içindeki en yüksek nokta.
-5. Sanal düğümler: F2 → MERKEZ koridoru dilimlere bölünür (dilim ≈ %80 menzil), her dilimden 2 düğüm
-   (sırt ağırlıklı, koridordan uzaklaştıkça azalan olasılık), kalanı kapsama için en az iki komşuya yakın sırtlardan.
-   Sabit seed ile 400 deneme; kısıtları (bağlı graf, her sanal düğüm ≥ 2 komşu, F1 → MERKEZ 5–9 hop,
+5. Sanal düğümler, görüş hattı açıkken (varsayılan): adaylar arası link grafı kurulur (menzil + LoS kuralı;
+   ~50 bin çift, önbellekli). F2 → MERKEZ omurgası bu grafta rastgele ağırlıklı Dijkstra ile bulunur (hop başına
+   sabit maliyet az hop'u kayırır); rotadaki her düğüm için önceki ve sonraki düğümü birlikte gören bir yedek
+   düğüm eklenir; kalanlar en az iki mevcut düğümü gören sırtlardan, yayılımı artıracak şekilde seçilir.
+   Görüş hattı kapalıyken: F2 → MERKEZ koridoru dilimlere bölünür ve her dilimden iki sırt düğümü seçilir.
+   Her iki yolda sabit seed ile 400 deneme; kısıtları (bağlı graf, her sanal düğüm ≥ 2 komşu, F1 → MERKEZ 5–9 hop,
    ≥ 600 m aralık) sağlayanlar arasından sırt, yedeklilik (rota düğümü kapanınca alternatif yol) ve yayılım
    puanı en yüksek olan seçilir. Sağlanamazsa aralık 50 m gevşetilir.
+6. Görüş hattı, çıktıya yazılan değerlerle (6 ondalık koordinat, tam sayı rakım) hesaplanır; böylece her linkin
+   durumu aynı DEM'den birebir yeniden üretilir (`test_terrain.py`).
 
 ## 6. REST ve WebSocket
 

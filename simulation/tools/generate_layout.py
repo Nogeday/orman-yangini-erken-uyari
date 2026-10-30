@@ -15,6 +15,7 @@ Kullanım:  python simulation/tools/generate_layout.py [--area simulation/config
 from __future__ import annotations
 
 import argparse
+import heapq
 import json
 import math
 import random
@@ -32,13 +33,14 @@ HW_CENTER = "LoRa SX1262 ağ geçidi + internet (konsept)"
 
 
 class _Cell:
-    __slots__ = ("r", "c", "lat", "lon", "elev", "tpi", "s", "x", "idx")
+    __slots__ = ("r", "c", "lat", "lon", "elev", "tpi", "s", "x", "idx", "z")
 
     def __init__(self, r, c, lat, lon, elev, tpi):
         self.r, self.c, self.lat, self.lon, self.elev, self.tpi = r, c, lat, lon, elev, tpi
         self.s = 0.0    # F2 → MERKEZ doğrultusunda konum (0…1)
         self.x = 0.0    # doğrultuya dik uzaklık (m)
         self.idx = -1
+        self.z = 0      # nodes.json'a yazılacak rakım (yuvarlanmış koordinatta bilinear, tam sayı)
 
 
 def _grid(dem, bbox, step):
@@ -241,6 +243,11 @@ def generate(area, dem) -> dict:
     def dist(a, b):  # noqa: F811 — matrisli sürüm
         return D[a.idx][b.idx]
 
+    # Görüş hattı, çıktıya yazılacak değerlerle (6 ondalık koordinat, tam sayı rakım) hesaplanır:
+    # nodes.json'daki her linkin durumu aynı DEM'den birebir yeniden üretilebilir.
+    for p in pts:
+        p.z = round(dem.elevation(round(p.lat, 6), round(p.lon, 6)))
+
     def ridge(p):
         return min(1.0, max(0.05, p.tpi / 60.0))
 
@@ -258,16 +265,31 @@ def generate(area, dem) -> dict:
 
     los_fn = los_cached if M.los.enabled else None
 
+    def as_node(nid, p, **extra):
+        return {"id": nid, "lat": round(p.lat, 6), "lon": round(p.lon, 6), "_key": (p.idx,), "_elev": p.z,
+                "_cell": p, **extra}
+
     def node_dicts(chosen):
         order = sorted(chosen, key=lambda p: (p.s, p.x))
-        out = [
-            {"id": "F1", "lat": f1.lat, "lon": f1.lon, "uplink": "F2", "_key": (-1,), "_elev": f1.elev, "_cell": f1},
-            {"id": "F2", "lat": f2.lat, "lon": f2.lon, "_key": (-2,), "_elev": f2.elev, "_cell": f2},
-        ]
-        for i, p in enumerate(order, 1):
-            out.append({"id": f"N{i:02d}", "lat": p.lat, "lon": p.lon, "_key": (p.idx,), "_elev": p.elev, "_cell": p})
-        out.append({"id": "MERKEZ", "lat": center.lat, "lon": center.lon, "_key": (-3,), "_elev": center.elev, "_cell": center})
+        out = [as_node("F1", f1, uplink="F2"), as_node("F2", f2)]
+        out += [as_node(f"N{i:02d}", p) for i, p in enumerate(order, 1)]
+        out.append(as_node("MERKEZ", center))
         return out
+
+    # Görüş hattı açıkken: aday çiftleri arası link grafı (menzil + LoS kuralı). F1 yalnızca F2'ye bağlanır.
+    vis = None
+    if M.los.enabled:
+        vis = [set() for _ in pts]
+        for i in range(len(pts)):
+            if i == f1.idx:
+                continue
+            for j in range(i + 1, len(pts)):
+                if j == f1.idx or D[i][j] > rng_m:
+                    continue
+                res = los_cached(as_node("a", pts[i]), as_node("b", pts[j]))
+                if res.clear or D[i][j] <= M.los.short_link_m:
+                    vis[i].add(j)
+                    vis[j].add(i)
 
     rejects: dict[str, int] = {}
 
@@ -301,42 +323,108 @@ def generate(area, dem) -> dict:
         return {"score": score, "nodes": nodes, "links": links, "path": path, "robust": robust,
                 "degrees": degrees, "min_spacing": min(nn)}
 
+    def spread_w(p, chosen):
+        d = min(dist(p, q) for q in fixed + chosen)
+        return ridge(p) * (0.3 + min(d, 2000.0) / 2000.0)
+
+    def sample_corridor(rng, spacing):
+        """F2 → MERKEZ koridoru dilimlerinden ikişer düğüm, kalanı kapsama için."""
+        chosen: list[_Cell] = []
+
+        def ok(p):
+            return all(dist(p, q) >= spacing for q in fixed + chosen)
+
+        for b in range(bins):
+            s0 = 0.03 + b * (0.94 / bins)
+            s1 = s0 + 0.94 / bins
+            pool = [p for p in cands if s0 <= p.s < s1 and abs(p.x) <= 2200]
+            for _k in range(2):
+                avail = [p for p in pool if ok(p)]
+                p = _weighted_pick(rng, avail, lambda p: ridge(p) * math.exp(-0.5 * (p.x / 1100.0) ** 2)) if avail else None
+                if p is not None:
+                    chosen.append(p)
+        while len(chosen) < L.virtual_count:
+            pool = [p for p in cands if ok(p) and sum(1 for q in fixed + chosen if dist(p, q) <= 0.85 * rng_m) >= 2]
+            if not pool:
+                break
+            chosen.append(_weighted_pick(rng, pool, lambda p: spread_w(p, chosen)))
+        return chosen
+
+    def sample_visibility(rng, spacing):
+        """Görüş hattı grafında: F2 → MERKEZ omurgası (rastgele ağırlıklı Dijkstra, hop başına sabit maliyet),
+        her omurga düğümü için iki komşusunu da gören bir baypas düğümü, kalanı ≥ 2 görünür komşulu sırtlar."""
+        chosen: list[_Cell] = []
+        taken: set[int] = set()
+
+        def ok(p):
+            return all(dist(p, q) >= spacing for q in fixed + chosen)
+
+        def add(p):
+            chosen.append(p)
+            taken.add(p.idx)
+
+        noise: dict[tuple[int, int], float] = {}
+
+        def weight(i, j):
+            key = (i, j) if i < j else (j, i)
+            if key not in noise:
+                noise[key] = rng.random()
+            return D[i][j] / 1000.0 + 0.8 + 0.6 * noise[key]
+
+        src, dst = f2.idx, center.idx
+        best_d = {src: 0.0}
+        prev: dict[int, int] = {}
+        heap = [(0.0, src)]
+        done: set[int] = set()
+        while heap:
+            du, u = heapq.heappop(heap)
+            if u in done:
+                continue
+            done.add(u)
+            if u == dst:
+                break
+            for v in sorted(vis[u]):
+                if v != dst and not all(dist(pts[v], q) >= spacing for q in fixed):
+                    continue
+                nd = du + weight(u, v)
+                if nd < best_d.get(v, math.inf):
+                    best_d[v] = nd
+                    prev[v] = u
+                    heapq.heappush(heap, (nd, v))
+        if dst not in best_d:
+            return None
+        path = [dst]
+        while path[-1] != src:
+            path.append(prev[path[-1]])
+        path.reverse()
+        for i in path[1:-1]:
+            if not ok(pts[i]):
+                return None
+            add(pts[i])
+        for k in range(1, len(path) - 1):
+            if len(chosen) >= L.virtual_count:
+                break
+            u, v, w = path[k - 1], path[k], path[k + 1]
+            common = [pts[x] for x in sorted(vis[u] & vis[w]) if x not in (u, v, w) and x not in taken and ok(pts[x])]
+            if common:
+                add(_weighted_pick(rng, common, ridge))
+        anchors = [f2.idx, center.idx]
+        while len(chosen) < L.virtual_count:
+            linked = anchors + [q.idx for q in chosen]
+            pool = [p for p in cands if p.idx not in taken and p.idx != f1.idx and ok(p)
+                    and sum(1 for q in linked if q in vis[p.idx]) >= 2]
+            if not pool:
+                break
+            add(_weighted_pick(rng, pool, lambda p: spread_w(p, chosen)))
+        return chosen
+
+    sampler = sample_visibility if vis is not None else sample_corridor
     best = None
     used_spacing = None
     for spacing in (L.min_spacing_m, L.min_spacing_m - 50, L.min_spacing_m - 100):
         rng = random.Random(L.seed)
         for _ in range(L.attempts):
-            chosen: list[_Cell] = []
-
-            def ok(p):
-                return all(dist(p, q) >= spacing for q in fixed + chosen)
-
-            per_bin = 2
-            for b in range(bins):
-                s0 = 0.03 + b * (0.94 / bins)
-                s1 = s0 + 0.94 / bins
-                pool = [p for p in cands if s0 <= p.s < s1 and abs(p.x) <= 2200]
-                for _k in range(per_bin):
-                    avail = [p for p in pool if ok(p)]
-                    p = _weighted_pick(rng, avail, lambda p: ridge(p) * math.exp(-0.5 * (p.x / 1100.0) ** 2)) if avail else None
-                    if p is not None:
-                        chosen.append(p)
-            while len(chosen) < L.virtual_count:
-                pool = []
-                for p in cands:
-                    if not ok(p):
-                        continue
-                    near_n = sum(1 for q in fixed + chosen if dist(p, q) <= 0.85 * rng_m)
-                    if near_n >= 2:
-                        pool.append(p)
-                if not pool:
-                    break
-
-                def spread_w(p):
-                    d = min(dist(p, q) for q in fixed + chosen)
-                    return ridge(p) * (0.3 + min(d, 2000.0) / 2000.0)
-
-                chosen.append(_weighted_pick(rng, pool, spread_w))
+            chosen = sampler(rng, spacing) or []
             if len(chosen) != L.virtual_count:
                 reject(f"yerleşen {len(chosen)}")
                 continue
@@ -366,7 +454,7 @@ def generate(area, dem) -> dict:
         rec = {
             "id": n["id"], "tur": tur, "rol": rol, "ad": ad,
             "lat": round(n["lat"], 6), "lon": round(n["lon"], 6),
-            "rakim_m": round(dem.elevation(n["lat"], n["lon"])),
+            "rakim_m": cell.z,
             "tpi_m": round(cell.tpi, 1),
             "direk_m": M.mast_m, "donanim": hw,
         }
