@@ -287,7 +287,7 @@ export class MeshMap {
       this.setLine('route-done', p.coords);
       this.markRoute(p.path, hops);
       this.packet.marker.setLngLat(p.coords[hops]);
-      this.packet.label.textContent = 'MERKEZ aldı';
+      this.packet.label.textContent = 'MERKEZ\'e ulaştı';
       const done = p;
       setTimeout(() => { if (this.prop === done) this.stopPropagation(); }, 1500);
       return;

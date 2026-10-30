@@ -420,6 +420,25 @@ def _with_key(rec, best):
     raise KeyError(rec["id"])
 
 
+def markdown_table(data: dict) -> str:
+    from server import mesh
+
+    links = [mesh.MeshLink.from_dict(l) for l in data["links"]]
+    adj = mesh.adjacency(links)
+    tur = {"physical": "fiziksel", "virtual": "sanal", "center": "merkez"}
+    rows = ["| ID | Tür | Enlem | Boylam | Rakım (m) | Komşu | Donanım |", "|---|---|---:|---:|---:|---:|---|"]
+    for n in data["nodes"]:
+        rows.append(f"| {n['id']} | {tur[n['tur']]} | {n['lat']:.6f} | {n['lon']:.6f} | {n['rakim_m']} | "
+                    f"{len(adj.get(n['id'], []))} | {n['donanim']} |")
+    ch = data["checks"]
+    rows.append("")
+    rows.append(f"Varsayılan rota: {' → '.join(ch['route'])} ({ch['route_hops']} hop, {ch['route_km']} km). "
+                f"Sanal düğümler arası en küçük aralık {ch['min_spacing_m']} m; F1–F2 {ch['f1_f2_m']} m; "
+                f"her sanal düğümün en az {ch['min_virtual_degree']} komşusu var; rota üzerindeki sanal düğümlerin "
+                f"{ch['bypassable_route_nodes']} tanesi devre dışı kalınca alternatif yol bulunuyor.")
+    return "\n".join(rows)
+
+
 def load_dem(area, tiles_dir: Path):
     from server.terrain import DemGrid
     from server.tiles import TileCache, fetch_sync, make_sync_client
@@ -448,9 +467,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Gerçek DEM'den düğüm yerleşimi üret (config/nodes.json)")
     ap.add_argument("--area", type=Path, default=DEFAULT_AREA)
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--table", action="store_true", help="mevcut nodes.json'dan README için Markdown tablo bas")
     args = ap.parse_args()
     area = load_area(args.area)
     out = args.out or nodes_path_for(area, args.area)
+    if args.table:
+        print(markdown_table(json.loads(out.read_text(encoding="utf-8"))))
+        return 0
     data = generate_nodes_file(area, out, DATA_DIR / "tiles")
     ch = data["checks"]
     print(f"Yazıldı: {out}")
