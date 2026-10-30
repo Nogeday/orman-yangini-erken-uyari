@@ -32,7 +32,7 @@ def plan(area, layers: list[str]) -> list[tuple[str, int, int, int]]:
     for layer in layers:
         z0, z1 = ranges[layer]
         for z in range(z0, z1 + 1):
-            border = pf.low_zoom_border if z <= 12 else 0   # eğik kamerada ufuk düşük zoom karosu ister
+            border = pf.low_zoom_border if z <= 13 else 0   # eğik kamerada ufuk düşük zoom karosu ister
             jobs += [(layer, z, x, y) for x, y in tiles_for_bbox(box, z, border)]
     return jobs
 

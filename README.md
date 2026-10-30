@@ -169,7 +169,7 @@ Testler (önce bir kez `simulation/.venv/bin/python -m pip install -r simulation
 ## Demo öncesi kontrol listesi
 
 - [ ] **İnternet varken bir kez:** `python3 simulation/run.py --no-browser` (bağımlılıklar) ve
-      `python3 simulation/tools/prefetch_tiles.py` (bölge için ~1300 karo, ~50 MB). Sonra Wi-Fi'ı kapatıp haritayı deneyin.
+      `python3 simulation/tools/prefetch_tiles.py` (bölge için ~1550 karo, ~70 MB). Sonra Wi-Fi'ı kapatıp haritayı deneyin.
 - [ ] F1'e **yeni 4×AA** pil (yedek set yanınızda); açılışta 1 bip.
 - [ ] F2 doğrudan dizüstüne takılı (hub değil); üst çubukta `Donanım: /dev/ttyUSB0` (ya da `COM5`).
 - [ ] MQ sensörü **en az 3 dakika** ısınsın (firmware ilk 45 s gaz alarmı vermez; kartta `ISINIYOR` rozeti söner).

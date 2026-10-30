@@ -46,7 +46,7 @@ class MapCfg(BaseModel):
 class PrefetchCfg(BaseModel):
     dem_zooms: tuple[int, int] = (9, 15)
     imagery_zooms: tuple[int, int] = (9, 16)
-    low_zoom_border: int = 1
+    low_zoom_border: int = 2
 
 
 class LayoutCfg(BaseModel):
