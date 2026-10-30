@@ -75,11 +75,11 @@ sudo apt install python3 python3-venv git
 ```
 
 ```bash
-git clone https://github.com/<kullanıcı>/orman-yangin-mesh.git
+git clone https://github.com/Nogeday/orman-yangini-erken-uyari.git
 ```
 
 ```bash
-cd orman-yangin-mesh
+cd orman-yangini-erken-uyari
 ```
 
 Seri port izni (bir kez; sonra oturumu kapatıp açın) ve CH340 kartlarını kapan `brltty` paketini kaldırma:
