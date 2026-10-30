@@ -19,7 +19,8 @@ simüle edilir ve hangi adımın gerçek, hangisinin simülasyon olduğu ekranda
 
 [Mimari](#mimari) · [Donanım](#donanım) · [Hızlı başlangıç — Linux](#hızlı-başlangıç--linux-ubuntu) ·
 [Hızlı başlangıç — Windows](#hızlı-başlangıç--windows) · [Firmware yükleme](#firmware-yükleme) ·
-[Çalıştırma modları](#çalıştırma-modları) · [Demo öncesi kontrol listesi](#demo-öncesi-kontrol-listesi) ·
+[Çalıştırma modları](#çalıştırma-modları) · [Telegram bildirimi](#telegram-bildirimi) ·
+[Demo öncesi kontrol listesi](#demo-öncesi-kontrol-listesi) ·
 [Jüri demosu](#jüri-demosu-adım-adım) · [Sorun giderme](#sorun-giderme) · [Proje yapısı](#proje-yapısı) ·
 [Teknik notlar](#teknik-notlar) · [Düğüm koordinatları](#düğüm-koordinatları) · [Lisans](#lisans)
 
@@ -40,13 +41,15 @@ flowchart LR
     C["MERKEZ<br/>gözetleme ve komuta"]
     K["OGM · İtfaiye · Muhtarlık<br/>(simüle bildirim)"]
   end
+  T["Telegram kanalı<br/>@orman_yangin_uyari_bot"]
   F1 -->|"nRF24L01+ 2.4 GHz<br/>gerçek RF"| F2
   F2 -->|"USB seri<br/>satır başına JSON"| S
   S -->|WebSocket| B
   S -.->|"silence 1 (ACK ile F1'e)"| F2
   F2 -.->|simüle| M
   M --> C
-  C --> K
+  C -->|simülasyon| K
+  C -->|"gerçek (internet)"| T
 ```
 
 Ayrıntılar: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · protokol: [`docs/PROTOCOL.md`](docs/PROTOCOL.md)
@@ -154,17 +157,60 @@ Diğer bayraklar: `--baud 115200`, `--http-port 8000` (doluysa sonraki boş port
 Harita köşesindeki **Uydu | Topo** düğmesi taban katmanı değiştirir (seçim tarayıcıda hatırlanır). Topo katmanı
 (OpenTopoMap) varsayılan önbelleğe alınmaz; çevrimdışı gerekiyorsa `prefetch_tiles.py --layers dem,imagery,topo`.
 
-**İsteğe bağlı Telegram bildirimi:** `simulation/.env.example` dosyasını `simulation/.env` olarak kopyalayıp ekibin
-kendi bot token'ını ve sohbet kimliğini yazın. MERKEZ bir olayı aldığında başlık, kaynak, koordinat + Google Maps
-bağlantısı, rakım, alarm tipi ve saat bu sohbete gider; olay panelinde “Telegram: gönderildi / hata” görünür.
-Değişkenler yoksa özellik kapalıdır.
-
 **Simüle Çakmak Tetikle** her modda çalışır ve aynı ayrıştırıcıdan, aynı olay akışından geçer. Donanım bağlıyken
 F1'in yerine ~45 s'lik geçici bir sanal F1 koşar; kayıtta ve kartta **SİMÜLE** yazar. Bu sırada gerçek F1'den alarm
 gelirse simülasyon hemen durur.
 
 Testler (önce bir kez `simulation/.venv/bin/python -m pip install -r simulation/requirements-dev.txt`):
 `simulation/.venv/bin/python -m pytest simulation/tests` — Windows'ta `simulation\.venv\Scripts\python -m pytest simulation\tests`.
+
+## Telegram bildirimi
+
+Olay MERKEZ'e ulaştığı anda MERKEZ, ekibin Telegram kanalına **gerçek** bir mesaj ve konum iğnesi gönderir
+(botumuz `@orman_yangin_uyari_bot`). OGM / İtfaiye / Muhtarlık bildirimleri simülasyon olarak kalır; gerçek
+kurumlara hiçbir şey gönderilmez. Alarm GAZ → YANGIN yükselince ve operatör “Olayı kapat” deyince de kanala kısa
+bir mesaj gider. Olay panelinde dört satır vardır: üç kurum “(simülasyon)”, Telegram kanalı “(gerçek)”.
+
+**Kurulum (bir kez)**
+
+1. Telegram'da @BotFather → `/newbot` → token'ı alın.
+2. Kanal → Yöneticiler → botu ekleyin; **“Mesaj gönderme”** yetkisi açık olsun.
+3. `simulation/.env.example` dosyasını `simulation/.env` olarak kopyalayın ve token'ı yazın:
+   `TELEGRAM_BOT_TOKEN=123456789:AA…` (boşluksuz, tırnaksız). `.env` git'e girmez.
+
+```bash
+cp simulation/.env.example simulation/.env
+```
+
+```powershell
+copy simulation\.env.example simulation\.env
+```
+
+4. Kanal kimliğini bulun ve `.env`'e `TELEGRAM_CHAT_ID=-100…` olarak yazın (tipi `channel` olan satır):
+
+```bash
+simulation/.venv/bin/python simulation/tools/telegram_test.py --sohbetler
+```
+
+```powershell
+simulation\.venv\Scripts\python simulation\tools\telegram_test.py --sohbetler
+```
+
+**Test (demo öncesi):** kısa bir bağlantı mesajı, ardından demodaki olay mesajının aynısı (konum iğnesiyle).
+
+```bash
+simulation/.venv/bin/python simulation/tools/telegram_test.py
+```
+
+```bash
+simulation/.venv/bin/python simulation/tools/telegram_test.py --ornek
+```
+
+Windows'ta aynı komutlar: `simulation\.venv\Scripts\python simulation\tools\telegram_test.py` (ve `--ornek`).
+
+- Token sızarsa: @BotFather → `/revoke`, yeni token'ı `.env`'e yazın.
+- İnternet yoksa demo aynen sürer; olay panelindeki Telegram satırı “Hata: …” gösterir, kayıtta Türkçe ipucu yazar.
+- `.env`'de ayar yoksa özellik kapalıdır ve satır hiç görünmez. Testler kanala hiçbir zaman mesaj göndermez.
 
 ## Demo öncesi kontrol listesi
 
@@ -174,6 +220,7 @@ Testler (önce bir kez `simulation/.venv/bin/python -m pip install -r simulation
 - [ ] F2 doğrudan dizüstüne takılı (hub değil); üst çubukta `Donanım: /dev/ttyUSB0` (ya da `COM5`).
 - [ ] MQ sensörü **en az 3 dakika** ısınsın (firmware ilk 45 s gaz alarmı vermez; kartta `ISINIYOR` rozeti söner).
 - [ ] Bir kez “Sahadaki sireni sustur” deneyin: kayıtta `F1 onayladı: siren susturuldu` görünmeli.
+- [ ] `telegram_test.py` başarılı (salon interneti ya da telefon hotspot'u).
 - [ ] Tarayıcı tam ekran (F11); projeksiyonda 1920×1080, dizüstünde 1366×768 test edildi.
 - [ ] Her şey ters giderse: **Simüle Çakmak Tetikle** aynı akışı donanımsız oynatır.
 
@@ -187,7 +234,8 @@ Testler (önce bir kez `simulation/.venv/bin/python -m pip install -r simulation
    geçen gerçek süreyi gösterir (hedef ≤ 150 ms).
 4. Paket F1 → F2 (**gerçek RF · nRF24 2.4 GHz**) → sanal düğümler (**simüle LoRa 868 MHz**) → MERKEZ yolunu hop hop
    izler. Panelde rota ve **hesaplanan ağ gecikmesi** (LoRa hava süresi modeli, “simülasyon”) yazar.
-5. MERKEZ alınca OGM, İtfaiye ve Muhtarlık sırayla “Gönderiliyor…” → “İletildi (simülasyon)” olur.
+5. MERKEZ alınca OGM, İtfaiye ve Muhtarlık sırayla “Gönderiliyor…” → “İletildi (simülasyon)” olur. Aynı anda ekibin
+   Telegram kanalına **gerçek** mesaj ve konum iğnesi gider: telefonda görünür, panelde “Gönderildi · 0.6 s (gerçek)”.
 6. **Sahadaki sireni sustur** → F1'in buzzer'ı bir sonraki pakette susar ve ekranda
    “F1 onayladı: siren susturuldu” yazar — bilgisayardan sahaya çift yönlü bağlantının kanıtı.
 7. (İsteğe bağlı) 30 s sonra yanan çakmağı DHT11'in ~5 cm altında 5–10 s tutun → **YANGIN** (gaz + ısı); olay güncellenir.
@@ -231,11 +279,11 @@ kayıtta `TEST` görünür).
 └── simulation/
     ├── run.py  run.sh  run.bat  requirements.txt  requirements-dev.txt  .env.example
     ├── config/   area.json (bölge, kamera, mesh) · nodes.json (üretilir, commit edilir) · agencies.json
-    ├── server/   main · config · protocol · serial_bridge · demo · state · incidents · mesh · terrain · tiles · notify
+    ├── server/   main · config · protocol · serial_bridge · demo · state · incidents · mesh · terrain · tiles · telegram_notify
     ├── web/      index.html · style.css · js/{app,map,ui,ws}.js · vendor/maplibre-gl/ (5.24.0)
-    ├── tools/    vendor_maplibre.py · prefetch_tiles.py · generate_layout.py
+    ├── tools/    vendor_maplibre.py · prefetch_tiles.py · generate_layout.py · telegram_test.py
     ├── data/     tiles/ (karo önbelleği) · logs/ (oturum kayıtları) — commit edilmez
-    └── tests/    test_protocol · test_mesh · test_terrain · test_incidents · test_serial · test_smoke
+    └── tests/    test_protocol · test_mesh · test_terrain · test_incidents · test_serial · test_smoke · test_telegram_notify
 ```
 
 ## Teknik notlar
@@ -274,8 +322,8 @@ hattı durumu `nodes.json`'a yazılır ve testte aynı DEM'den yeniden doğrulan
 - Harita motoru: [MapLibre GL JS](https://maplibre.org/) 5.24.0 (BSD-3-Clause), `simulation/web/vendor/` altında
 
 Karolar üçüncü taraf lisanslıdır ve depoda yer almaz (`simulation/data/tiles/` gitignore'da); kullanım
-sağlayıcıların koşullarına tabidir. Kurum bildirimleri simülasyondur; hiçbir kuruma ileti gönderilmez. İsteğe bağlı
-Telegram bildirimi yalnızca `simulation/.env` ile ve yalnızca ekibin kendi sohbetine gider (`.env.example`).
+sağlayıcıların koşullarına tabidir. Kurum bildirimleri simülasyondur; hiçbir kuruma ileti gönderilmez. Gerçek giden
+tek bildirim ekibin kendi Telegram kanalına, yalnızca `simulation/.env` ile gider ([Telegram bildirimi](#telegram-bildirimi)).
 
 ## Düğüm koordinatları
 

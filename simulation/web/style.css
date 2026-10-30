@@ -169,14 +169,20 @@ body {
 .inc-alarm[data-alarm="1"], .inc-alarm[data-alarm="2"] { color: var(--warn); font-weight: 700; }
 .inc-alarm[data-alarm="3"] { color: var(--alarm); font-weight: 700; }
 .inc-ok { color: var(--normal); }
-.agencies { margin: 0 0 8px; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.agencies {
+  margin: 0 0 8px; padding: 0; list-style: none; border-top: 1px solid var(--line); font-size: 13px;
+  display: grid; grid-template-columns: max-content minmax(0, 1fr) auto; column-gap: 8px;
+}
 .agencies li {
-  display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 8px;
+  display: grid; grid-column: 1 / -1; grid-template-columns: subgrid;
   padding: 2px 0; border-bottom: 1px solid var(--line); align-items: baseline;
 }
+.ag-status { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .agencies li[data-status="bekliyor"] .ag-status { color: var(--muted); }
 .agencies li[data-status="gonderiliyor"] .ag-status { color: var(--warn); }
-.agencies li[data-status="iletildi"] .ag-status { color: var(--normal); }
+.agencies li[data-status="iletildi"] .ag-status, .agencies li[data-status="ok"] .ag-status { color: var(--normal); }
+.agencies li[data-status="partial"] .ag-status { color: var(--warn); }
+.agencies li[data-status="error"] .ag-status { color: var(--alarm); }
 .ag-time { color: var(--muted); font-size: 12px; }
 .inc-actions { display: flex; gap: 8px; }
 .inc-actions .btn { flex: 1; }

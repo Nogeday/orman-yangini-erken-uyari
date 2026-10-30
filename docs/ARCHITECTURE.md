@@ -19,6 +19,7 @@ flowchart LR
     MS["mesh.py<br/>link · Dijkstra · LoRa süresi"]
     TP["tiles.py<br/>karo vekili + disk önbelleği"]
     HUB["main.py Hub<br/>WebSocket yayını"]
+    TG["telegram_notify.py<br/>arka plan görevi"]
   end
   subgraph WEB["Tarayıcı (derleme yok)"]
     APP["app.js durum"]
@@ -38,6 +39,8 @@ flowchart LR
   MAP -- "GET /tiles/…" --> TP
   UI -- "POST /api/…" --> EN
   EN -- "silence 1 / test 1" --> SB
+  IN -- "MERKEZ aldı → notify()" --> TG
+  TG -- "gerçek (internet)" --> TK["Ekibin Telegram kanalı"]
 ```
 
 | Dosya | Sorumluluk |
@@ -50,11 +53,12 @@ flowchart LR
 | `server/mesh.py` | Haversine, link kuralı, görüş hattı (Fresnel + dünya eğriliği), Dijkstra, LoRa hava süresi. |
 | `server/terrain.py` | Terrarium çözme, XYZ karo matematiği, DEM mozaiği ve profil. |
 | `server/tiles.py` | Karo vekili: disk → üst kaynak (httpx, 8 s), çevrimdışıysa 20 s bekleme, 404. |
-| `server/notify.py` | İsteğe bağlı Telegram (yalnızca `.env` varsa). |
+| `server/telegram_notify.py` | Ekibin Telegram kanalına GERÇEK bildirim (yalnızca `simulation/.env` varsa): mesaj + konum iğnesi, arka planda, olay akışını bekletmeden; token log'a ve arayüze düşmez. |
 | `server/main.py` | FastAPI uygulaması, `Hub`, `Runtime` (kaynak politikası, 20 ms tik), REST/WS uç noktaları. |
 | `tools/generate_layout.py` | Gerçek DEM'den deterministik düğüm yerleşimi → `config/nodes.json`. |
 | `tools/prefetch_tiles.py` | Çevrimdışı demo için karo ön-yükleme. |
 | `tools/vendor_maplibre.py` | MapLibre dağıtım dosyalarını npm paketinden sha512 doğrulamasıyla indirir. |
+| `tools/telegram_test.py` | Telegram kurulumu: sohbet kimliklerini listeler (`--sohbetler`), test ve örnek olay mesajı gönderir. |
 
 ## 2. Tek veri hattı
 
@@ -101,6 +105,7 @@ sequenceDiagram
   participant F2 as F2 (USB)
   participant S as Sunucu
   participant B as Tarayıcı
+  participant T as Telegram kanalı
   F1->>F2: SensorPacket alarm=1 (nRF24, 1–3 ms)
   F2->>S: {"type":"tel",…,"alarm":1} (≈16 ms @115200)
   S->>B: telemetry + node_state (rx_at) — F1 alarm görünümü
@@ -109,6 +114,8 @@ sequenceDiagram
   Note over B: paket hop hop ilerler (yalnızca görsel)
   S->>B: incident_received (hop × 600 ms sonra)
   S->>B: dispatch OGM +0.3 s, İtfaiye +0.6 s, Muhtarlık +0.9 s → her biri +0.8 s "İletildi (simülasyon)"
+  S-)T: aynı anda (MERKEZ → internet) Telegram mesajı + konum iğnesi — GERÇEK
+  T--)S: sonuç → WS "telegram" + Kayıt "Telegram: gönderildi · 0.6 s"
   B->>S: POST /api/command {target:1, cmd:"silence"}
   S->>F2: silence 1
   F2-->>F1: sonraki ACK payload'unda CMD_SILENCE
@@ -123,6 +130,13 @@ sequenceDiagram
   ayrı gösterilir: `LoRa hop sayısı × (hava süresi + işlem)`.
 - Olay kaynak normale dönse de operatör "Olayı kapat" diyene kadar açık kalır. "Sıfırla" tüm olayları,
   bekleyen zamanlayıcıları (epoch sayacıyla) ve devre dışı düğümleri temizler.
+- **Telegram** MERKEZ'in internet üzerinden gönderdiği tek gerçek bildirimdir: olay MERKEZ'e ulaşınca `created`
+  (mesaj + konum iğnesi), alarm yükselince `escalated` (MERKEZ duyurduktan sonra), operatör kapatınca `closed`;
+  "Sıfırla" gönderilmiş olay hafızasını temizler. `notify()` hemen döner, gönderim arka planda sürer; sonuç
+  WebSocket'e `telegram` olayı ve Kayıt'a `Telegram: …` satırı olarak düşer, `created` sonucu olay panelinin
+  "Telegram kanalı" satırına işlenir. Olay sözlüğü: `id, node, node_type, simulated, alarm, lat, lon, alt_m, at,
+  route, area, reading` (`reading` yalnızca fiziksel düğümde, olayı tetikleyen paketten). Testlerde
+  `TELEGRAM_BOT_TOKEN=""` ile kapalıdır; kanala mesaj gitmez.
 
 ## 5. Mesh modeli
 
@@ -161,7 +175,7 @@ Modellenmeyenler (bilerek): eş zamanlı iletim çakışması, 868 MHz bandını
 | Uç nokta | Açıklama |
 |---|---|
 | `GET /` | Arayüz (statik, `Cache-Control: no-cache`) |
-| `GET /api/config` | Bölge, kamera, düğümler, linkler, kurumlar, mesh parametreleri, atıflar |
+| `GET /api/config` | Bölge, kamera, düğümler, linkler, kurumlar, mesh parametreleri, atıflar, `telegram_enabled` |
 | `GET /api/state` | Anlık görüntü (WS `snapshot` ile aynı) |
 | `GET /api/health` | Kaynak, istemci sayısı, karo durumu, oturum kaydı yolu |
 | `WS /ws` | Önce `snapshot`, sonra olaylar |
@@ -174,7 +188,8 @@ Modellenmeyenler (bilerek): eş zamanlı iletim çakışması, 868 MHz bandını
 | `GET /tiles/{dem\|imagery\|topo}/{z}/{x}/{y}` | Karo vekili (yoksa 404) |
 
 WS olayları: `snapshot`, `telemetry`, `node_state`, `link`, `source_status`, `route`, `propagation`,
-`incident_created`, `incident_updated`, `incident_received`, `dispatch`, `incident_closed`, `log`, `reset`.
+`incident_created`, `incident_updated`, `incident_received`, `dispatch`, `incident_closed`, `log`, `reset`,
+`telegram` (`incident_id, kind, status, sent, total, detail, latency_ms, at, text`).
 
 ## 7. Tasarım kararları
 
@@ -187,5 +202,5 @@ WS olayları: `snapshot`, `telemetry`, `node_state`, `link`, `source_status`, `r
   içinde, zoom 11–16 arasında tutulur; önbellek dışına çıkılmaz.
 - **WebGL yoksa** (GPU hızlandırma kapalı) harita alanında açıklayıcı uyarı çıkar; paneller, olay akışı ve
   komutlar çalışmaya devam eder.
-- **Kurum bildirimleri simülasyondur**; hiçbir kuruma ileti gitmez. Telegram yalnızca ekibin kendi sohbetine,
-  yalnızca `.env` ile.
+- **Kurum bildirimleri simülasyondur**; hiçbir kuruma ileti gitmez. Telegram yalnızca ekibin kendi kanalına,
+  yalnızca `simulation/.env` ile (gerçek).

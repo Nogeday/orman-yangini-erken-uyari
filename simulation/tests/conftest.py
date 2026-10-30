@@ -30,3 +30,9 @@ def engine_factory(app_config):
         return engine, clock, events
 
     return make
+
+
+@pytest.fixture(autouse=True)
+def _telegram_kapali(monkeypatch):
+    # Silmek yetmez: .env yeniden yüklenir. Boş değer ise ezilmez, Telegram kapalı kalır.
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "")

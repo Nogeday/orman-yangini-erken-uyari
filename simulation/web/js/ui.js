@@ -285,27 +285,48 @@ export class UI {
     if (inc.silenced_at) durum.push(`<small>${esc(inc.source)} onayladı: siren susturuldu (${hms(inc.silenced_at)})</small>`);
     else if (this.silenceSent.has(inc.id)) durum.push('<small>Susturma komutu gönderildi, onay bekleniyor…</small>');
     if (inc.source_normal_at) durum.push(`<small>Kaynak normale döndü ${hms(inc.source_normal_at)}</small>`);
-    const tg = inc.notify && inc.notify.telegram;
-    if (tg) durum.push(`<small>Telegram: ${esc(tg.text)}${tg.detail ? ` (${esc(tg.detail)})` : ''} ${hms(tg.at)}</small>`);
     lines.push(`<li>${durum.join('')}</li>`);
     const agencies = this.cfg.agencies.map((a) => {
       const d = inc.dispatch[a.id] || { status: 'bekliyor', status_text: 'Bekliyor', at: null };
       return `<li data-status="${esc(d.status)}"><span>${esc(a.name)}</span><span class="ag-status">${esc(d.status_text)}</span>
-        <span class="ag-time num">${d.at ? hms(d.at, true) : '—'}</span></li>`;
-    }).join('');
+        <span class="ag-time num">${d.at ? hms(d.at) : '—'}</span></li>`;
+    }).join('') + this.telegramRow(inc);
     const silenceTarget = inc.source === 'F1' ? '1' : inc.source === 'F2' ? '2' : '';
     const canSilence = inc.can_silence && silenceTarget && !inc.silenced_at && inc.alarm > 0;
     this.el.incident.innerHTML = `
       <div class="inc-head"><strong class="num">#${esc(inc.no)}</strong><span class="num">${hms(inc.started_at)}</span>
         <span class="src">${esc(inc.source)} ${esc(role)}</span><span class="badges">${tags}</span></div>
       <ul class="inc-lines">${lines.join('')}</ul>
-      <ul class="agencies" aria-label="Kurum bildirimleri (simülasyon)">${agencies}</ul>
+      <ul class="agencies" aria-label="Kurum bildirimleri (simülasyon) ve Telegram kanalı (gerçek)">${agencies}</ul>
       <div class="inc-actions">
         <button class="btn" data-act="silence" data-id="${inc.id}" data-target="${silenceTarget}"${canSilence ? '' : ' disabled'}>Sahadaki sireni sustur</button>
         <button class="btn" data-act="close" data-id="${inc.id}">Olayı kapat</button>
       </div>
       ${others.length ? `<div class="inc-other">Diğer aktif olaylar: ${others.map((o) =>
         `<button data-act="select" data-id="${o.id}">#${esc(o.no)} ${esc(o.source)}</button>`).join(', ')}</div>` : ''}`;
+  }
+
+  // Kurumlar simülasyondur; Telegram kanalı satırı GERÇEK gönderimdir (MERKEZ → internet → ekibin kanalı).
+  telegramRow(inc) {
+    if (!this.cfg.telegram_enabled) return '';
+    const t = inc.telegram;
+    let status = 'bekliyor';
+    let text = 'Bekliyor';
+    let full = '';
+    if (t && t.status === 'sending') {
+      status = 'gonderiliyor';
+      text = 'Gönderiliyor…';
+    } else if (t && t.status === 'ok') {
+      status = 'ok';
+      text = `Gönderildi${t.latency_ms != null ? ` · ${(t.latency_ms / 1000).toFixed(1)} s` : ''} (gerçek)`;
+      full = t.detail ? `${text} · ${t.detail}` : '';
+    } else if (t && (t.status === 'partial' || t.status === 'error')) {
+      status = t.status;
+      full = t.status === 'error' ? `Hata: ${t.detail || 'bilinmeyen'}` : `Kısmen gönderildi: ${t.detail || ''}`;
+      text = full;                       // hücreye sığmayan kısım CSS ile "…" olur; tamamı title'da
+    }
+    return `<li data-status="${status}"${full ? ` title="${esc(full)}"` : ''}><span>Telegram kanalı</span>
+      <span class="ag-status">${esc(text)}</span><span class="ag-time num">${t && t.at ? hms(t.at) : '—'}</span></li>`;
   }
 
   // ---------- kayıt ----------

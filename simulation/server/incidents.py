@@ -2,6 +2,9 @@
 
 Zamanlayıcılar sunucudadır (tüm sekmeler aynı durumu görür) ve enjekte edilen saatle çalışır;
 testler gerçek zamanı beklemez. Kurum bildirimleri SİMÜLASYONDUR: hiçbir kuruma ileti gitmez.
+Gerçek olan tek bildirim, MERKEZ'in internet üzerinden ekibin Telegram kanalına gönderdiğidir
+(Engine.telegram_notify → server/telegram_notify.py): olay MERKEZ'e ulaşınca "created",
+alarm yükselince "escalated", operatör kapatınca "closed".
 """
 from __future__ import annotations
 
@@ -49,7 +52,8 @@ class Incident:
     silenced_at: Optional[float] = None
     closed: bool = False
     dispatch: dict = field(default_factory=dict)
-    notify: dict = field(default_factory=dict)
+    telegram: Optional[dict] = None         # kanal bildiriminin durumu ("created" sonucu)
+    reading: Optional[dict] = None          # olayı tetikleyen paket: gas, base, t, h (yalnızca fiziksel)
     propagation_id: Optional[int] = None
     can_silence: bool = False
     kinds: list[str] = field(default_factory=list)
@@ -67,7 +71,7 @@ class Incident:
             "received_at": _ms(self.received_at) if self.received_at else None,
             "source_normal_at": _ms(self.source_normal_at) if self.source_normal_at else None,
             "silenced_at": _ms(self.silenced_at) if self.silenced_at else None,
-            "dispatch": self.dispatch, "notify": self.notify, "can_silence": self.can_silence,
+            "dispatch": self.dispatch, "telegram": self.telegram, "can_silence": self.can_silence,
         }
 
 
@@ -93,11 +97,12 @@ class IncidentManager:
         return [i for i in self.incidents.values() if not i.closed]
 
     # ---- alarm girişi ----
-    def on_alarm(self, node_id: str, alarm: int, prev: int, origin: "Origin", test: bool = False) -> None:
+    def on_alarm(self, node_id: str, alarm: int, prev: int, origin: "Origin", test: bool = False,
+                 reading: Optional[dict] = None) -> None:
         e = self.engine
         inc = self.open_for(node_id)
         if alarm > 0 and inc is None and (prev == 0 or alarm > prev):
-            self._create(node_id, alarm, origin, test)
+            self._create(node_id, alarm, origin, test, reading)
             return
         if inc is None:
             return
@@ -112,6 +117,8 @@ class IncidentManager:
                 inc.alarm_peak = alarm
                 e.log(f"Olay {inc.id:03d} güncellendi: alarm yükseldi {alarm_name(old)} → {alarm_name(alarm)}",
                       "alarm", origin)
+                if inc.received_at is not None:     # MERKEZ almadıysa "created" mesajı zaten yeni alarmı taşır
+                    e.telegram_notify(inc, "escalated", reading)
             e.emit("incident_updated", incident=inc.to_dict())
         elif prev > 0:
             inc.alarm = 0
@@ -125,14 +132,15 @@ class IncidentManager:
             inc.silenced_at = self.engine.clock.wall()
             self.engine.emit("incident_updated", incident=inc.to_dict())
 
-    def _create(self, node_id: str, alarm: int, origin: "Origin", test: bool = False) -> None:
+    def _create(self, node_id: str, alarm: int, origin: "Origin", test: bool = False,
+                reading: Optional[dict] = None) -> None:
         e = self.engine
         n = e.cfg.node(node_id) or {}
         inc = Incident(
             id=self._next_id, source=node_id, source_name=n.get("ad", node_id), started_at=e.clock.wall(),
             alarm=alarm, alarm_peak=alarm, simulated=origin.simulated, tag="TEST" if test else origin.tag,
             lat=n.get("lat", 0.0), lon=n.get("lon", 0.0), rakim_m=n.get("rakim_m", 0),
-            can_silence=n.get("tur") == "physical",
+            can_silence=n.get("tur") == "physical", reading=reading if n.get("tur") == "physical" else None,
         )
         self._next_id += 1
         inc.dispatch = {a["id"]: {"name": a["name"], "status": "bekliyor", "status_text": DISPATCH_TEXT["bekliyor"],
@@ -196,11 +204,10 @@ class IncidentManager:
         inc.status = "merkez_aldi"
         inc.received_at = e.clock.wall()
         e.log(f"MERKEZ olayı aldı: Olay {inc.id:03d} ({inc.source} {alarm_name(inc.alarm_peak)})", "ok", tag=inc.tag)
+        e.telegram_notify(inc, "created")       # MERKEZ → internet → ekibin kanalı (gerçek)
         e.emit("incident_received", incident=inc.to_dict())
         for a in self.agencies:
             e.scheduler.call_later(float(a.get("offset_s", 0.0)), self._dispatch, inc.id, a["id"], "gonderiliyor", epoch)
-        if e.notifier is not None:
-            e.notifier.incident_received(inc.to_dict())
 
     def _dispatch(self, inc_id: int, agency_id: str, status: str, epoch: int) -> None:
         inc = self._alive(inc_id, epoch)
@@ -215,22 +222,13 @@ class IncidentManager:
         if status == "gonderiliyor":
             e.scheduler.call_later(self.deliver_after_s, self._dispatch, inc.id, agency_id, "iletildi", epoch)
 
-    def set_notify(self, inc_id: int, channel: str, ok: bool, detail: str) -> None:
-        inc = self.incidents.get(inc_id)
-        if inc is None:
-            return
-        e = self.engine
-        inc.notify[channel] = {"ok": ok, "text": "gönderildi" if ok else "hata", "detail": detail,
-                               "at": _ms(e.clock.wall())}
-        e.log(f"Telegram: {'gönderildi' if ok else 'hata — ' + detail} (Olay {inc.id:03d})", "ok" if ok else "warn",
-              tag=inc.tag)
-        e.emit("incident_updated", incident=inc.to_dict())
-
     # ---- operatör ----
     def close(self, inc_id: int) -> Optional[Incident]:
         inc = self.incidents.get(inc_id)
         if inc is None or inc.closed:
             return None
+        if inc.received_at is not None:         # kanala yalnızca duyurulmuş olay için "kapatıldı"
+            self.engine.telegram_notify(inc, "closed")
         inc.closed = True
         if inc.propagation_id is not None:
             self.propagations.pop(inc.propagation_id, None)

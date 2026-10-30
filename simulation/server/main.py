@@ -20,11 +20,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import __version__
-from .config import WEB_DIR, AppConfig, Settings, load_app_config, load_env
-from .notify import make_notifier
+from .config import SIM_DIR, WEB_DIR, AppConfig, Settings, load_app_config
 from .serial_bridge import SerialBridge
 from .state import Clock, Engine, Origin, SessionLog
 from .terrain import pad_bbox
+from .telegram_notify import TelegramNotifier
 from .tiles import LAYERS, TileCache, TileProxy, valid_request
 
 log = logging.getLogger("orman")
@@ -186,7 +186,7 @@ class CommandBody(BaseModel):
     cmd: Literal["silence", "test"] = "silence"
 
 
-def public_config(cfg: AppConfig, engine: Engine, telegram: bool) -> dict:
+def public_config(cfg: AppConfig, engine: Engine) -> dict:
     a = cfg.area
     bbox = a.bbox.model_dump()
     return {
@@ -201,7 +201,6 @@ def public_config(cfg: AppConfig, engine: Engine, telegram: bool) -> dict:
                  "hop_latency_ms": round(engine.hop_latency_ms, 1), "los": a.mesh.los.enabled},
         "layers": {k: {"attribution": v.attribution, "max_zoom": v.max_zoom} for k, v in LAYERS.items()},
         "layout": cfg.layout_info,
-        "telegram": telegram,
     }
 
 
@@ -209,27 +208,30 @@ def create_app(settings: Settings, clock: Optional[Clock] = None) -> FastAPI:
     cfg = load_app_config(settings)
     clock = clock or Clock()
     hub = Hub()
-    notifier = make_notifier(load_env(), cfg.area.title)
     session_log = SessionLog(settings.logs_dir, clock) if settings.session_log else None
-    engine = Engine(cfg, clock=clock, emit=hub.publish, notifier=notifier, session_log=session_log)
-    if notifier is not None:
-        notifier.bind(engine)
+    engine = Engine(cfg, clock=clock, emit=hub.publish, session_log=session_log)
     runtime = Runtime(settings, engine)
     tiles = TileProxy(TileCache(settings.tiles_dir))
-    pub = public_config(cfg, engine, notifier is not None)
+    pub = public_config(cfg, engine)
     started = time.monotonic()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        # Telegram (gerçek kanal bildirimi) burada, olay döngüsü içinde kurulur: modül içe aktarılırken değil;
+        # testlerin ortam ayarı (TELEGRAM_BOT_TOKEN="") ancak böyle geçerli olur.
+        notifier = TelegramNotifier.from_env(SIM_DIR / ".env", on_result=engine.on_telegram_result)
+        engine.notifier = notifier
+        status = notifier.describe()
+        log.info(status)
+        engine.log(status, "warn" if notifier.problem else "info", tag="")
         await tiles.start()
         await runtime.start()
         try:
             yield
         finally:
             await runtime.stop()
+            await notifier.aclose()
             await tiles.close()
-            if notifier is not None:
-                await notifier.close()
             if session_log is not None:
                 session_log.close()
 
@@ -259,7 +261,7 @@ def create_app(settings: Settings, clock: Optional[Clock] = None) -> FastAPI:
 
     @app.get("/api/config")
     async def get_config() -> dict:
-        return pub
+        return {**pub, "telegram_enabled": bool(engine.notifier is not None and engine.notifier.enabled)}
 
     @app.get("/api/state")
     async def get_state() -> dict:

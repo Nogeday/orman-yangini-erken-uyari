@@ -235,44 +235,101 @@ def test_demo_trigger_right_after_start_still_alarms(engine_factory):
     assert len(of(events, "incident_created")) == 1
 
 
-def test_telegram_notification_goes_only_to_team_chat(app_config):
-    """İsteğe bağlı Telegram: MERKEZ olayı alınca ekibin sohbetine tek mesaj; sonuç olaya yazılır."""
-    import asyncio
-    import json as _json
+class FakeNotifier:
+    """TelegramNotifier'ın motorun kullandığı yüzü (enabled, notify, reset); ağ yok."""
+    enabled = True
 
-    import httpx
+    def __init__(self):
+        self.calls = []
+        self.resets = 0
 
-    from server.notify import TelegramNotifier, make_notifier
-    from server.state import Engine, FakeClock
+    def notify(self, incident, kind="created"):
+        self.calls.append((kind, dict(incident)))
+        return True
 
-    assert make_notifier({}, "x") is None                          # .env yoksa özellik kapalı
-    sent = []
+    def reset(self):
+        self.resets += 1
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        sent.append((str(request.url), _json.loads(request.content)))
-        return httpx.Response(200, json={"ok": True, "result": {"message_id": 1}})
 
-    async def scenario():
-        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-        notifier = TelegramNotifier("123:ABC", "-100200", app_config.area.title, client=client)
-        clock = FakeClock(start=0.0)
-        events = []
-        engine = Engine(app_config, clock=clock, emit=events.append, notifier=notifier)
-        notifier.bind(engine)
-        engine.ingest_line(tel(1, 1000, alarm=1, gas=1100, kind="event"), HW)
-        for _ in range(int(10 / 0.02)):
-            clock.advance(0.02)
-            engine.tick()
-        await asyncio.sleep(0.05)
-        await client.aclose()
-        return engine
+def test_telegram_created_at_merkez_then_escalated_closed_and_reset(engine_factory):
+    from server.telegram_notify import SendResult
 
-    engine = asyncio.run(scenario())
-    assert len(sent) == 1
-    url, body = sent[0]
-    assert url == "https://api.telegram.org/bot123:ABC/sendMessage" and body["chat_id"] == "-100200"
-    text = body["text"]
-    assert "Olay 001" in text and "GAZ" in text and "google.com/maps?q=40.664129,39.716558" in text
-    assert "simülasyondur" in text
-    inc = engine.incidents.active()[0]
-    assert inc.notify["telegram"]["ok"] and inc.notify["telegram"]["text"] == "gönderildi"
+    engine, clock, events = engine_factory()
+    fake = FakeNotifier()
+    engine.notifier = fake
+    engine.ingest_line(tel(1, 1000, alarm=1, gas=1100, base=320, kind="event"), HW)
+    (inc,) = engine.incidents.active()
+    assert fake.calls == []                                   # MERKEZ almadan kanala gitmez
+    run(engine, clock, inc.hops * 0.6 + 0.1)
+    kind, payload = fake.calls[0]
+    assert kind == "created" and payload["id"] == inc.id and payload["at"] == inc.started_at
+    assert (payload["node"], payload["node_type"], payload["simulated"], payload["alarm"]) == ("F1", "physical", False, 1)
+    assert payload["route"] == inc.route and payload["route"][-1] == "MERKEZ"
+    assert (payload["lat"], payload["lon"], payload["alt_m"]) == (inc.lat, inc.lon, inc.rakim_m)
+    assert payload["reading"] == {"gas": 1100, "base": 320, "t": 24.0, "h": 45.0}
+    assert payload["area"] == "Trabzon / Maçka – Altındere Vadisi"
+    received = of(events, "incident_received")[-1]["incident"]
+    assert received["telegram"]["status"] == "sending"        # arayüzde "Gönderiliyor…"
+
+    engine.on_telegram_result(SendResult.make(inc.id, "created", "ok", 1, 1, "", 640))
+    (event,) = of(events, "telegram")
+    assert event["status"] == "ok" and event["latency_ms"] == 640 and event["kind"] == "created"
+    assert engine.logs[-1]["text"] == "Telegram: gönderildi · 0.6 s"
+    assert inc.telegram["status"] == "ok" and of(events, "incident_updated")[-1]["incident"]["telegram"]["latency_ms"] == 640
+
+    engine.ingest_line(tel(2, 1300, alarm=3, gas=1100, t=33.0, kind="event"), HW)
+    kind, payload = fake.calls[1]
+    assert kind == "escalated" and payload["alarm"] == 3 and payload["reading"]["t"] == 33.0
+    engine.close_incident(inc.id)
+    assert [c[0] for c in fake.calls] == ["created", "escalated", "closed"]
+    engine.reset()
+    assert fake.resets == 1
+
+
+def test_telegram_not_sent_before_merkez_for_escalation_or_close(engine_factory):
+    engine, clock, events = engine_factory()
+    fake = FakeNotifier()
+    engine.notifier = fake
+    engine.ingest_line(tel(1, 1000, alarm=1, gas=1100, kind="event"), HW)
+    engine.ingest_line(tel(2, 1300, alarm=3, gas=1100, t=33.0, kind="event"), HW)     # MERKEZ'den önce yükseldi
+    (inc,) = engine.incidents.active()
+    run(engine, clock, inc.hops * 0.6 + 0.1)
+    assert [(k, p["alarm"]) for k, p in fake.calls] == [("created", 3)]                 # tek mesaj, güncel alarm
+    engine.ingest_line(tel(3, 1600, alarm=1, gas=1100, kind="event"), HW)
+    engine.reset()
+    engine.ingest_line(tel(4, 30_000, alarm=0, kind="event"), HW)
+    engine.ingest_line(tel(5, 30_300, alarm=1, gas=1100, kind="event"), HW)
+    (inc2,) = engine.incidents.active()
+    engine.close_incident(inc2.id)                                                      # kanala hiç duyurulmadı
+    assert [c[0] for c in fake.calls] == ["created"]
+
+
+def test_telegram_virtual_source_and_stale_result_after_reset(engine_factory):
+    from server.telegram_notify import SendResult
+
+    engine, clock, events = engine_factory()
+    fake = FakeNotifier()
+    engine.notifier = fake
+    engine.simulate_fire("N07")
+    (inc,) = engine.incidents.active()
+    run(engine, clock, inc.hops * 0.6 + 0.1)
+    kind, payload = fake.calls[0]
+    assert kind == "created" and payload["node_type"] == "virtual" and payload["simulated"] is True
+    assert "reading" not in payload                          # sanal düğümde ölçüm uydurulmaz
+    engine.reset()
+    engine.simulate_fire("N07")                              # aynı numara (#1) yeniden kullanılır
+    engine.on_telegram_result(SendResult.make(1, "created", "ok", 1, 1, "", 500))   # Sıfırla öncesinin sonucu
+    assert engine.incidents.active()[0].telegram is None     # yeni olaya işlenmez
+    assert engine.logs[-1]["text"] == "Telegram: gönderildi · 0.5 s"
+
+
+def test_telegram_disabled_leaves_flow_unchanged(engine_factory):
+    from server.telegram_notify import TelegramNotifier
+
+    engine, clock, events = engine_factory()
+    engine.notifier = TelegramNotifier("", "")               # .env'de ayar yok
+    engine.ingest_line(tel(1, 1000, alarm=1, gas=1100, kind="event"), HW)
+    (inc,) = engine.incidents.active()
+    run(engine, clock, inc.hops * 0.6 + 2.0)
+    assert inc.telegram is None and not of(events, "telegram")
+    assert all(d["status"] == "iletildi" for d in inc.dispatch.values())

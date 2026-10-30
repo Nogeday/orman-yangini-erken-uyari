@@ -257,6 +257,7 @@ class Engine:
         self.overlay: Optional[DemoNetwork] = None
         self.replay: Optional[ReplaySource] = None
         self.command_sink: Optional[Callable[[str], bool]] = None
+        self._telegram_pending: set[tuple[int, str]] = set()
         self.route = self.compute_route("F1")
 
     # ---- yayın ve kayıt ----
@@ -277,6 +278,45 @@ class Engine:
             self.emit("source_status", source=self.source)
             if log and (message or label):
                 self.log(message or label, "warn" if state != "ok" else "info", tag="")
+
+    # ---- Telegram: MERKEZ'in internet üzerinden ekibin kanalına gönderdiği GERÇEK bildirim ----
+    def incident_payload(self, inc: Any, reading: Optional[dict] = None) -> dict:
+        """server/telegram_notify.py'nin beklediği olay sözlüğü."""
+        physical = (self.cfg.node(inc.source) or {}).get("tur") == "physical"
+        payload = {
+            "id": inc.id, "node": inc.source, "node_type": "physical" if physical else "virtual",
+            "simulated": inc.simulated or inc.tag == "REPLAY",     # canlı donanım değilse simüle
+            "alarm": inc.alarm_peak, "lat": inc.lat, "lon": inc.lon, "alt_m": inc.rakim_m,
+            "at": inc.started_at, "route": inc.route, "area": self.cfg.area.title,
+        }
+        data = reading or inc.reading
+        if physical and data:
+            payload["reading"] = data
+        return payload
+
+    def telegram_notify(self, inc: Any, kind: str, reading: Optional[dict] = None) -> None:
+        """Olay akışını bekletmez: gönderim arka planda sürer, sonuç on_telegram_result'a gelir."""
+        notifier = self.notifier
+        if notifier is None or not getattr(notifier, "enabled", False):
+            return
+        if notifier.notify(self.incident_payload(inc, reading), kind):
+            self._telegram_pending.add((inc.id, kind))
+            if kind == "created":
+                inc.telegram = {"status": "sending", "text": "Gönderiliyor…", "detail": "",
+                                "latency_ms": None, "at": _ms(self.clock.wall())}
+
+    def on_telegram_result(self, result: Any) -> None:
+        """WebSocket'e 'telegram' olayı + Kayıt satırı; 'created' sonucu olayın Telegram satırına işlenir."""
+        event = result.to_event()
+        key = (event.get("incident_id"), event.get("kind"))
+        current = key in self._telegram_pending        # Sıfırla'dan önce başlamış gönderim olaya işlenmez
+        self._telegram_pending.discard(key)
+        inc = self.incidents.incidents.get(event.get("incident_id")) if current else None
+        self._emit(event)
+        self.log("Telegram: " + result.ui_text, "ok" if result.ok else "warn", tag=inc.tag if inc else "")
+        if inc is not None and event.get("kind") == "created":
+            inc.telegram = {k: event.get(k) for k in ("status", "text", "detail", "latency_ms", "at")}
+            self.emit("incident_updated", incident=inc.to_dict())
 
     # ---- rota ----
     def disabled(self) -> set[str]:
@@ -387,7 +427,8 @@ class Engine:
         if n.status() != prev_status or msg.alarm != prev_alarm:
             self.emit("node_state", node=node, rx_at=wall_ms)
         if msg.alarm != prev_alarm:
-            self.incidents.on_alarm(nid, msg.alarm, prev_alarm, origin, test=test)
+            self.incidents.on_alarm(nid, msg.alarm, prev_alarm, origin, test=test,
+                                    reading={"gas": msg.gas, "base": msg.base, "t": msg.t, "h": msg.h})
 
     def _on_link(self, msg: Link, origin: Origin, now: float, rx_wall: float) -> None:
         nid = NODE_IDS.get(msg.node)
@@ -490,6 +531,9 @@ class Engine:
     def reset(self) -> dict:
         self.incidents.reset()
         self.scheduler.clear()
+        if self.notifier is not None:
+            self.notifier.reset()               # aynı olay numarası yeniden gönderilebilsin
+        self._telegram_pending.clear()
         for n in self.nodes.values():
             n.disabled = False
             n.sim_fire = False

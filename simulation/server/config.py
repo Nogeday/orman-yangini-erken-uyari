@@ -3,7 +3,6 @@ komut satırı ayarları. Başka bölge = yeni area JSON dosyası (--area), kod 
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -193,16 +192,3 @@ def load_app_config(settings: Settings) -> AppConfig:
     info = {k: data.get(k) for k in ("seed", "dem", "checks")}
     return AppConfig(area=area, area_path=Path(settings.area), nodes=nodes, links=links,
                      agencies=load_agencies(), layout_info=info)
-
-
-def load_env() -> dict[str, str]:
-    """simulation/.env (yoksa repo kökündeki .env). Yalnızca Telegram ayarları okunur."""
-    try:
-        from dotenv import dotenv_values
-    except ImportError:  # pragma: no cover
-        return {}
-    for p in (SIM_DIR / ".env", REPO_DIR / ".env"):
-        if p.is_file():
-            vals = {k: v for k, v in dotenv_values(p).items() if v}
-            return {k: vals[k] for k in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID") if k in vals}
-    return {k: os.environ[k] for k in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID") if os.environ.get(k)}

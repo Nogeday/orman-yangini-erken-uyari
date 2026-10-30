@@ -61,6 +61,7 @@ def test_demo_trigger_reaches_three_agencies_and_silence_is_acknowledged(server)
     base, port = server
     cfg = httpx.get(base + "/api/config").json()
     assert len(cfg["nodes"]) == 19 and cfg["mesh"]["airtime_ms"] == pytest.approx(205.8, abs=1)
+    assert cfg["telegram_enabled"] is False          # testler gerçek kanala asla mesaj göndermez
 
     with connect(f"ws://127.0.0.1:{port}/ws", open_timeout=5) as ws:
         first = _recv(ws, 5)
