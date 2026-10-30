@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orman Yangını Erken Uyarı Ağı</title>
+  <link rel="stylesheet" href="vendor/maplibre-gl/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <strong>Orman Yangını Erken Uyarı Ağı</strong>
+      <span id="area-title" class="muted"></span>
+    </div>
+    <div id="system-status" class="system-status" role="status" aria-live="polite">BAĞLANIYOR</div>
+    <div class="topbar-right">
+      <span id="source-label" class="source" title=""></span>
+      <span id="clock" class="num clock">--:--:--</span>
+      <button id="btn-trigger" class="btn" type="button">Simüle Çakmak Tetikle</button>
+      <button id="btn-reset" class="btn" type="button">Sıfırla</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="map-wrap" aria-label="Gerçek DEM üzerinde 3B arazi ve mesh ağı">
+      <div id="map"></div>
+      <button id="btn-view" class="btn btn-small map-btn" type="button">Görünümü sıfırla</button>
+      <div id="map-status" class="map-status" hidden></div>
+      <ul class="legend" aria-label="Lejant">
+        <li><span class="lg lg-square"></span>Fiziksel düğüm (F1, F2)</li>
+        <li><span class="lg lg-circle"></span>Sanal LoRa düğümü — simüle</li>
+        <li><span class="lg lg-center"></span>MERKEZ (gözetleme ve komuta)</li>
+        <li><span class="lg lg-link"></span>Link: ≤ <span id="lg-range">2.5</span> km — simüle</li>
+        <li><span class="lg lg-route"></span>Aktif rota → MERKEZ</li>
+      </ul>
+    </section>
+
+    <aside class="panel">
+      <section class="panel-section" aria-labelledby="h-nodes">
+        <h2 id="h-nodes">Fiziksel Düğümler</h2>
+        <div id="node-cards"></div>
+      </section>
+      <section class="panel-section" id="sec-incident" aria-labelledby="h-incident">
+        <h2 id="h-incident">Olay</h2>
+        <div id="incident"><p class="muted">Aktif olay yok</p></div>
+      </section>
+      <section class="panel-section grow" aria-labelledby="h-log">
+        <h2 id="h-log">Kayıt</h2>
+        <ol id="log" class="log"></ol>
+      </section>
+    </aside>
+  </main>
+
+  <script src="vendor/maplibre-gl/maplibre-gl.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

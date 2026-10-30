@@ -148,6 +148,9 @@ class Runtime:
             self._hw_lost_at = time.monotonic()
         if e.demo is not None:
             e.set_source("demo", "DEMO · donanım aranıyor", "ok", ev["message"], log=False)
+        elif self.settings.source == "auto" and ev["state"] == "searching":
+            # ipucu, birazdan açılacak DEMO kaydında bir kez yazılır
+            e.set_source("searching", "Donanım aranıyor…", "warn", ev["message"], log=False)
         elif ev["state"] == "lost":
             e.command_sink = None
             e.set_source("lost", "Donanım bağlantısı koptu — yeniden deneniyor", "warn", ev["message"])
@@ -345,8 +348,8 @@ def serve(settings: Settings) -> None:
     shown_host = "127.0.0.1" if settings.host in ("0.0.0.0", "::") else settings.host
     url = f"http://{shown_host}:{port}/"
     if port != settings.http_port:
-        print(f"{settings.http_port} portu dolu, {port} kullanılıyor.")
-    print(f"Orman Yangını Erken Uyarı Ağı — {url}   (kaynak: {settings.source}; çıkış: Ctrl+C)")
+        print(f"{settings.http_port} portu dolu, {port} kullanılıyor.", flush=True)
+    print(f"Orman Yangını Erken Uyarı Ağı — {url}   (kaynak: {settings.source}; çıkış: Ctrl+C)", flush=True)
     if not settings.no_browser:
         _open_browser_when_ready(url)
     config = uvicorn.Config(app, log_level="warning", access_log=False, lifespan="on")
