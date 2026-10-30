@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 830" width="1040" height="830" role="img" aria-label="Kablolama şeması: F2 · ESP32 DevKit V1 · USB">
+<style>
+.pcb{fill:#1F5C3E;stroke:#143D29;stroke-width:2}
+.pcb-ink{fill:#E6F1EA}
+.trace{fill:none;stroke:#E6F1EA;stroke-width:2;opacity:.75}
+.can{fill:#C9CED2;stroke:#8C949A;stroke-width:1.5}
+.can-ink{fill:#2F363B}
+.mod{fill:#2B3239;stroke:#161B20;stroke-width:1.5}
+.mod-ink{fill:#E7EBEF}
+.lbl{fill:#17201B}
+.muted{fill:#5B6760}
+.pad{fill:#C9A43A;stroke:#143D29;stroke-width:1}
+.hdr{fill:#C9A43A}
+.res{fill:#FFFFFF;stroke:#17201B;stroke-width:1.6}
+.plate{stroke:#17201B;stroke-width:2.6;stroke-linecap:butt}
+.nc{stroke:#5B6760;stroke-width:2;stroke-linecap:round}
+.antenna{stroke:#2B3239;stroke-width:9;stroke-linecap:round}
+.usb{fill:#C9CED2;stroke:#8C949A;stroke-width:1.2}
+.cable{fill:none;stroke:#5B6760;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.ghost{fill:none;stroke:#5B6760;stroke-width:1.5;stroke-dasharray:6 5}
+.holder{fill:#2B2F33}
+.cell{fill:#D9DDE0;stroke:#8C949A;stroke-width:1}
+.cell-ink{fill:#2B2F33}
+.dht{fill:#8FC1E3;stroke:#8C949A;stroke-width:1}
+.slot{stroke:#2B3239;stroke-width:2.5;stroke-linecap:round}
+.mesh{fill:none;stroke:#8C949A;stroke-width:1.2;stroke-dasharray:2 3}
+.led{fill:#3D7BFF}
+.btn{fill:#8C949A}
+.flag-ink{fill:#FFFFFF}
+.w{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.gs{fill:none;stroke-width:2.2;stroke-linecap:round}
+text{font-family:'IBM Plex Mono',ui-monospace,'DejaVu Sans Mono',Consolas,monospace}
+.sans{font-family:'IBM Plex Sans','DejaVu Sans','Segoe UI',Roboto,sans-serif}
+.t10{font-size:10.5px}.t11{font-size:11px}.t12{font-size:12px}.t13{font-size:13px}.t15{font-size:15px}
+.b{font-weight:600}
+.s-v5{stroke:#D2283C}.f-v5{fill:#D2283C}
+.s-v33{stroke:#E07B1A}.f-v33{fill:#E07B1A}
+.s-gnd{stroke:#2B2F33}.f-gnd{fill:#2B2F33}
+.s-ce{stroke:#B88A00}.f-ce{fill:#B88A00}
+.s-csn{stroke:#0F8F98}.f-csn{fill:#0F8F98}
+.s-sck{stroke:#2C63D6}.f-sck{fill:#2C63D6}
+.s-mosi{stroke:#7A45D0}.f-mosi{fill:#7A45D0}
+.s-miso{stroke:#C03A86}.f-miso{fill:#C03A86}
+.s-dht{stroke:#23935A}.f-dht{fill:#23935A}
+.s-mq{stroke:#8A5526}.f-mq{fill:#8A5526}
+.s-buz{stroke:#4F6E92}.f-buz{fill:#4F6E92}
+</style>
+<rect x="0" y="0" width="1040" height="830" fill="#FFFFFF"/>
+<text class="lbl t15 b sans" x="20" y="28">F2 · ESP32 DevKit V1 · USB</text>
+<rect class="pcb" x="190" y="40" width="240" height="740" rx="12"/>
+<path class="trace" d="M238 66 v-14 h18 v14 h18 v-14 h18 v14 h18 v-14 h18 v14 h18 v-14 h18 v14 h18 v-14"/>
+<rect class="can" x="232" y="82" width="156" height="104" rx="4"/>
+<text class="can-ink t12 b" x="310" y="132" text-anchor="middle">ESP-WROOM-32</text>
+<text class="can-ink t10" x="310" y="150" text-anchor="middle">Wi-Fi kapalı · 3.3 V</text>
+<text class="pcb-ink t15 b sans" x="310" y="222" text-anchor="middle">ESP32 DEVKIT V1</text>
+<text class="pcb-ink t11" x="310" y="241" text-anchor="middle">F2 · köprü</text>
+<text class="pcb-ink t12 b" x="204" y="304" text-anchor="start">VIN</text>
+<text class="pcb-ink t12 b" x="204" y="344" text-anchor="start">GND</text>
+<text class="pcb-ink t12 b" x="204" y="384" text-anchor="start">3V3</text>
+<text class="pcb-ink t12" x="416" y="294" text-anchor="end"><tspan class="b">GPIO4</tspan><tspan dx="6">D4</tspan></text>
+<text class="pcb-ink t12" x="416" y="324" text-anchor="end"><tspan class="b">GPIO5</tspan><tspan dx="6">D5</tspan></text>
+<text class="pcb-ink t12" x="416" y="354" text-anchor="end"><tspan class="b">GPIO18</tspan><tspan dx="6">D18</tspan></text>
+<text class="pcb-ink t12" x="416" y="384" text-anchor="end"><tspan class="b">GPIO23</tspan><tspan dx="6">D23</tspan></text>
+<text class="pcb-ink t12" x="416" y="414" text-anchor="end"><tspan class="b">GPIO19</tspan><tspan dx="6">D19</tspan></text>
+<text class="pcb-ink t12" x="416" y="514" text-anchor="end"><tspan class="b">GPIO27</tspan><tspan dx="6">D27</tspan></text>
+<text class="pcb-ink t12" x="416" y="604" text-anchor="end"><tspan class="b">GPIO34</tspan><tspan dx="6">D34</tspan></text>
+<text class="pcb-ink t12" x="416" y="719" text-anchor="end"><tspan class="b">GPIO25</tspan><tspan dx="6">D25</tspan></text>
+<rect class="btn" x="208" y="726" width="34" height="18" rx="3"/>
+<text class="pcb-ink t10" x="225" y="760" text-anchor="middle">BOOT</text>
+<rect class="btn" x="384" y="726" width="30" height="18" rx="3"/>
+<text class="pcb-ink t10" x="399" y="760" text-anchor="middle">EN</text>
+<circle class="led" cx="345" cy="735" r="5"/>
+<text class="pcb-ink t10" x="345" y="760" text-anchor="middle">LED·2</text>
+<rect class="usb" x="286" y="770" width="48" height="22" rx="3"/>
+<text class="can-ink t10 b" x="310" y="785" text-anchor="middle">USB</text>
+<text class="lbl t12 b sans" x="620" y="258" text-anchor="start">nRF24L01+ PA+LNA</text>
+<line class="antenna" x1="785" y1="262" x2="785" y2="196"/>
+<rect class="usb" x="776" y="260" width="18" height="12" rx="2"/>
+<text class="muted t11" x="799" y="214" text-anchor="start">anten</text>
+<rect class="mod" x="620" y="270" width="180" height="180" rx="5"/>
+<rect class="can" x="684" y="304" width="74" height="90" rx="3"/>
+<text class="can-ink t10 b" x="721" y="345" text-anchor="middle">PA/LNA</text>
+<text class="can-ink t10" x="721" y="360" text-anchor="middle">RFX2401C</text>
+<text class="mod-ink t11" x="632" y="294" text-anchor="start">CE</text>
+<text class="mod-ink t11" x="632" y="324" text-anchor="start">CSN</text>
+<text class="mod-ink t11" x="632" y="354" text-anchor="start">SCK</text>
+<text class="mod-ink t11" x="632" y="384" text-anchor="start">MOSI</text>
+<text class="mod-ink t11" x="632" y="414" text-anchor="start">MISO</text>
+<text class="mod-ink t11" x="632" y="439" text-anchor="start">IRQ</text>
+<text class="mod-ink t11" x="792" y="304" text-anchor="end">VCC</text>
+<text class="mod-ink t11" x="792" y="424" text-anchor="end">GND</text>
+<text class="lbl t12 b sans" x="620" y="474" text-anchor="start">DHT11 · 0–50 °C</text>
+<rect class="mod" x="620" y="482" width="140" height="60" rx="5"/>
+<rect class="dht" x="668" y="488" width="50" height="48" rx="3"/>
+<line class="slot" x1="676" y1="498" x2="710" y2="498"/>
+<line class="slot" x1="676" y1="507" x2="710" y2="507"/>
+<line class="slot" x1="676" y1="516" x2="710" y2="516"/>
+<line class="slot" x1="676" y1="525" x2="710" y2="525"/>
+<text class="mod-ink t11" x="632" y="514" text-anchor="start">DATA</text>
+<text class="mod-ink t11" x="752" y="500" text-anchor="end">VCC</text>
+<text class="mod-ink t11" x="752" y="532" text-anchor="end">GND</text>
+<text class="lbl t12 b sans" x="620" y="564" text-anchor="start">MQ gaz sensörü</text>
+<rect class="mod" x="620" y="572" width="200" height="96" rx="5"/>
+<circle class="can" cx="712" cy="620" r="30"/>
+<circle class="mesh" cx="712" cy="620" r="21"/>
+<circle class="mesh" cx="712" cy="620" r="12"/>
+<text class="mod-ink t11" x="632" y="604" text-anchor="start">AO</text>
+<text class="mod-ink t11" x="632" y="644" text-anchor="start">DO</text>
+<text class="mod-ink t11" x="812" y="594" text-anchor="end">VCC</text>
+<text class="mod-ink t11" x="812" y="654" text-anchor="end">GND</text>
+<text class="lbl t12 b sans" x="620" y="688" text-anchor="start">Buzzer (aktif)</text>
+<rect class="mod" x="620" y="696" width="140" height="50" rx="5"/>
+<circle class="can" cx="690" cy="721" r="16"/>
+<circle class="mod" cx="690" cy="721" r="4"/>
+<text class="mod-ink t11" x="632" y="719" text-anchor="start">S</text>
+<text class="mod-ink t11" x="752" y="734" text-anchor="end">GND</text>
+<rect class="ghost" x="36" y="56" width="100" height="200" rx="6"/>
+<text class="lbl t12 b" x="86" y="150" text-anchor="middle">PİL YOK</text>
+<text class="muted t11" x="86" y="168" text-anchor="middle">USB'den</text>
+<text class="muted t11" x="86" y="183" text-anchor="middle">beslenir</text>
+<polyline class="cable" points="310,792 310,812 86,812 86,708"/>
+<rect class="usb" x="40" y="640" width="92" height="60" rx="4"/>
+<rect class="mod" x="48" y="648" width="76" height="44" rx="2"/>
+<text class="mod-ink t12 b" x="86" y="674" text-anchor="middle">PC</text>
+<text class="muted t11" x="200" y="806" text-anchor="middle">USB · 5 V + seri veri</text>
+<g class="net" data-net="v5"><polyline class="w s-v5" points="190,300 150,300"/><polygon class="f-v5" points="150,300 141,289 104,289 104,311 141,311"/><text class="flag-ink t11 b" x="122.5" y="304" text-anchor="middle">5V</text><circle class="pad" cx="190" cy="300" r="4.5"/><polyline class="w s-v5" points="820,590 860,590"/><polygon class="f-v5" points="860,590 869,579 906,579 906,601 869,601"/><text class="flag-ink t11 b" x="887.5" y="594" text-anchor="middle">5V</text><rect class="hdr" x="816" y="586" width="8" height="8"/></g>
+<g class="net" data-net="v33"><polyline class="w s-v33" points="190,380 150,380"/><polygon class="f-v33" points="150,380 141,369 100,369 100,391 141,391"/><text class="flag-ink t11 b" x="120.5" y="384" text-anchor="middle">3V3</text><circle class="pad" cx="190" cy="380" r="4.5"/><polyline class="w s-v33" points="800,300 975,300"/><polygon class="f-v33" points="975,300 984,289 1029,289 1029,311 984,311"/><text class="flag-ink t11 b" x="1006.5" y="304" text-anchor="middle">3V3</text><rect class="hdr" x="796" y="296" width="8" height="8"/><polyline class="w s-v33" points="860,300 860,350"/><circle class="f-v33" cx="860" cy="300" r="4.2"/><line class="plate" x1="846" y1="350" x2="874" y2="350"/><path class="plate" d="M846 362 Q860 354 874 362" fill="none"/><text class="lbl t11 b" x="878" y="346">+</text><polyline class="w s-gnd" points="860,360 860,420"/><circle class="f-gnd" cx="860" cy="420" r="4.2"/><polyline class="w s-v33" points="920,300 920,350"/><circle class="f-v33" cx="920" cy="300" r="4.2"/><line class="plate" x1="906" y1="350" x2="934" y2="350"/><line class="plate" x1="906" y1="358" x2="934" y2="358"/><polyline class="w s-gnd" points="920,358 920,420"/><circle class="f-gnd" cx="920" cy="420" r="4.2"/><text class="lbl t11" x="866" y="392">47 µF</text><text class="lbl t11" x="926" y="392">100 nF</text><polyline class="w s-v33" points="760,496 800,496"/><polygon class="f-v33" points="800,496 809,485 854,485 854,507 809,507"/><text class="flag-ink t11 b" x="831.5" y="500" text-anchor="middle">3V3</text><rect class="hdr" x="756" y="492" width="8" height="8"/></g>
+<g class="net" data-net="gnd"><polyline class="w s-gnd" points="190,340 160,340"/><circle class="f-gnd" cx="160" cy="340" r="4.2"/><g class="gs s-gnd"><line x1="160" y1="340" x2="160" y2="350"/><line x1="149" y1="350" x2="171" y2="350"/><line x1="153" y1="355" x2="167" y2="355"/><line x1="157" y1="360" x2="163" y2="360"/></g><circle class="pad" cx="190" cy="340" r="4.5"/><polyline class="w s-gnd" points="800,420 975,420"/><g class="gs s-gnd"><line x1="975" y1="420" x2="975" y2="430"/><line x1="964" y1="430" x2="986" y2="430"/><line x1="968" y1="435" x2="982" y2="435"/><line x1="972" y1="440" x2="978" y2="440"/></g><rect class="hdr" x="796" y="416" width="8" height="8"/><polyline class="w s-gnd" points="760,528 790,528"/><g class="gs s-gnd"><line x1="790" y1="528" x2="790" y2="538"/><line x1="779" y1="538" x2="801" y2="538"/><line x1="783" y1="543" x2="797" y2="543"/><line x1="787" y1="548" x2="793" y2="548"/></g><rect class="hdr" x="756" y="524" width="8" height="8"/><polyline class="w s-gnd" points="820,650 850,650"/><g class="gs s-gnd"><line x1="850" y1="650" x2="850" y2="660"/><line x1="839" y1="660" x2="861" y2="660"/><line x1="843" y1="665" x2="857" y2="665"/><line x1="847" y1="670" x2="853" y2="670"/></g><rect class="hdr" x="816" y="646" width="8" height="8"/><polyline class="w s-gnd" points="760,730 790,730"/><g class="gs s-gnd"><line x1="790" y1="730" x2="790" y2="740"/><line x1="779" y1="740" x2="801" y2="740"/><line x1="783" y1="745" x2="797" y2="745"/><line x1="787" y1="750" x2="793" y2="750"/></g><rect class="hdr" x="756" y="726" width="8" height="8"/></g>
+<g class="net" data-net="ce"><circle class="pad" cx="430" cy="290" r="4.5"/><rect class="hdr" x="616" y="286" width="8" height="8"/><polyline class="w s-ce" points="430,290 620,290"/><text class="muted t11" x="446" y="283">CE</text><polygon class="f-ce" points="570,285 580,290 570,295"/></g>
+<g class="net" data-net="csn"><circle class="pad" cx="430" cy="320" r="4.5"/><rect class="hdr" x="616" y="316" width="8" height="8"/><polyline class="w s-csn" points="430,320 620,320"/><text class="muted t11" x="446" y="313">CSN</text><polygon class="f-csn" points="570,315 580,320 570,325"/></g>
+<g class="net" data-net="sck"><circle class="pad" cx="430" cy="350" r="4.5"/><rect class="hdr" x="616" y="346" width="8" height="8"/><polyline class="w s-sck" points="430,350 620,350"/><text class="muted t11" x="446" y="343">SCK</text><polygon class="f-sck" points="570,345 580,350 570,355"/></g>
+<g class="net" data-net="mosi"><circle class="pad" cx="430" cy="380" r="4.5"/><rect class="hdr" x="616" y="376" width="8" height="8"/><polyline class="w s-mosi" points="430,380 620,380"/><text class="muted t11" x="446" y="373">MOSI</text><polygon class="f-mosi" points="570,375 580,380 570,385"/></g>
+<g class="net" data-net="miso"><circle class="pad" cx="430" cy="410" r="4.5"/><rect class="hdr" x="616" y="406" width="8" height="8"/><polyline class="w s-miso" points="430,410 620,410"/><text class="muted t11" x="446" y="403">MISO</text><polygon class="f-miso" points="580,405 570,410 580,415"/></g>
+<g class="net" data-net="dht"><circle class="pad" cx="430" cy="510" r="4.5"/><rect class="hdr" x="616" y="506" width="8" height="8"/><polyline class="w s-dht" points="430,510 620,510"/><text class="muted t11" x="446" y="503">DATA</text><polygon class="f-dht" points="566,510 572,505 572,515"/><polygon class="f-dht" points="584,510 578,505 578,515"/></g>
+<g class="net" data-net="mq"><circle class="pad" cx="430" cy="600" r="4.5"/><rect class="hdr" x="616" y="596" width="8" height="8"/><polyline class="w s-mq" points="430,600 520,600"/><circle class="f-mq" cx="520" cy="600" r="4.2"/><polyline class="w s-mq" points="520,600 545,600"/><rect class="res" x="545" y="593" width="40" height="14" rx="1"/><polyline class="w s-mq" points="585,600 620,600"/><text class="lbl t11 b" x="565" y="587" text-anchor="middle">R1 10 kΩ</text><polyline class="w s-mq" points="520,600 520,615"/><rect class="res" x="513" y="615" width="14" height="40" rx="1"/><polyline class="w s-gnd" points="520,655 520,672"/><g class="gs s-gnd"><line x1="520" y1="672" x2="520" y2="682"/><line x1="509" y1="682" x2="531" y2="682"/><line x1="513" y1="687" x2="527" y2="687"/><line x1="517" y1="692" x2="523" y2="692"/></g><text class="lbl t11 b" x="506" y="632" text-anchor="end">R2</text><text class="lbl t11" x="506" y="646" text-anchor="end">10 kΩ</text><text class="muted t11" x="446" y="591">AO÷2</text><polygon class="f-mq" points="497,595 487,600 497,605"/></g>
+<g class="net" data-net="buz"><circle class="pad" cx="430" cy="715" r="4.5"/><rect class="hdr" x="616" y="711" width="8" height="8"/><polyline class="w s-buz" points="430,715 620,715"/><text class="muted t11" x="446" y="708">S</text><polygon class="f-buz" points="570,710 580,715 570,720"/></g>
+<rect class="hdr" x="616" y="431" width="8" height="8"/><line class="nc" x1="599" y1="430" x2="609" y2="440"/><line class="nc" x1="599" y1="440" x2="609" y2="430"/><text class="muted t11" x="594" y="439" text-anchor="end">boş</text>
+<rect class="hdr" x="616" y="636" width="8" height="8"/><line class="nc" x1="599" y1="635" x2="609" y2="645"/><line class="nc" x1="599" y1="645" x2="609" y2="635"/><text class="muted t11" x="594" y="644" text-anchor="end">boş</text>
+</svg>

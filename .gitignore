@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# PlatformIO / editör
+.pio/
+.vscode/*
+!.vscode/settings.json
+
+# Harita karosu önbelleği (üçüncü taraf lisanslı) ve oturum kayıtları
+simulation/data/tiles/
+simulation/data/logs/
+
+# Sırlar
+.env
+
+# İşletim sistemi
+.DS_Store
+Thumbs.db
+
+node_modules/

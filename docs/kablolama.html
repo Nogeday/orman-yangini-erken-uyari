@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orman Mesh Kablolama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+html{color-scheme:light}body{margin:0}[hidden]{display:none!important}
+</style>
+<style>
+/* Düzen: tek sütun tezgâh kartı — başlık + düğüm seçici, tam genişlik şema, pin tablosu,
+   altta güç / ek parçalar / kontrol listesi (geniş ekranda iki sütun). */
+:root{
+  --bg:#FFFFFF;--fg:#17201B;--muted:#5B6760;--surface:#FFFFFF;--pcb:#1F5C3E;--pcb-edge:#143D29;--pcb-ink:#E6F1EA;--pad:#C9A43A;--can:#C9CED2;--can-edge:#8C949A;--can-ink:#2F363B;--mod:#2B3239;--mod-edge:#161B20;--mod-ink:#E7EBEF;--holder:#2B2F33;--cell:#D9DDE0;--cell-ink:#2B2F33;--dht:#8FC1E3;--led:#3D7BFF;--flag-ink:#FFFFFF;--w-v5:#D2283C;--w-v33:#E07B1A;--w-gnd:#2B2F33;--w-ce:#B88A00;--w-csn:#0F8F98;--w-sck:#2C63D6;--w-mosi:#7A45D0;--w-miso:#C03A86;--w-dht:#23935A;--w-mq:#8A5526;--w-buz:#4F6E92;--page:#F2F4F1;--line:#D3DAD5;--accent:#1E6B47;--hl:#E7EFE9;--warn:#A8401A;--warn-bg:#FBEEE7;--chip:#E9EEEA;
+  --font-display:"IBM Plex Sans Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --font-body:"IBM Plex Sans","Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Consolas,"DejaVu Sans Mono",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#161D1A;--fg:#E3EAE6;--muted:#93A29A;--surface:#161D1A;--pcb:#1B5137;--pcb-edge:#0E2B1D;--pcb-ink:#DDEEE4;--pad:#D8B651;--can:#A9B0B5;--can-edge:#6F787E;--can-ink:#1C2125;--mod:#0C0F12;--mod-edge:#3A444C;--mod-ink:#E7EBEF;--holder:#0C0F12;--cell:#B9BFC3;--cell-ink:#111417;--dht:#6FA6CB;--led:#6E9CFF;--flag-ink:#111614;--w-v5:#FF5A6C;--w-v33:#FF9F45;--w-gnd:#B4BDC2;--w-ce:#E7BE2E;--w-csn:#2EC7CF;--w-sck:#6B98FF;--w-mosi:#AE86FF;--w-miso:#F275B6;--w-dht:#45CD87;--w-mq:#D3965D;--w-buz:#8FB0D6;--page:#0F1412;--line:#2A3530;--accent:#4CC38A;--hl:#1D2A24;--warn:#FF8E62;--warn-bg:#2A1B14;--chip:#1F2925; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161D1A;--fg:#E3EAE6;--muted:#93A29A;--surface:#161D1A;--pcb:#1B5137;--pcb-edge:#0E2B1D;--pcb-ink:#DDEEE4;--pad:#D8B651;--can:#A9B0B5;--can-edge:#6F787E;--can-ink:#1C2125;--mod:#0C0F12;--mod-edge:#3A444C;--mod-ink:#E7EBEF;--holder:#0C0F12;--cell:#B9BFC3;--cell-ink:#111417;--dht:#6FA6CB;--led:#6E9CFF;--flag-ink:#111614;--w-v5:#FF5A6C;--w-v33:#FF9F45;--w-gnd:#B4BDC2;--w-ce:#E7BE2E;--w-csn:#2EC7CF;--w-sck:#6B98FF;--w-mosi:#AE86FF;--w-miso:#F275B6;--w-dht:#45CD87;--w-mq:#D3965D;--w-buz:#8FB0D6;--page:#0F1412;--line:#2A3530;--accent:#4CC38A;--hl:#1D2A24;--warn:#FF8E62;--warn-bg:#2A1B14;--chip:#1F2925; color-scheme:dark}
+
+body{background:var(--page);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px;display:flex;flex-direction:column;gap:28px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(28px,4vw,40px);line-height:1.05;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.lede{max-width:62ch;margin:10px 0 0;color:var(--muted)}
+h2{font-family:var(--font-display);font-weight:700;font-size:21px;margin:0 0 4px;text-wrap:balance}
+.sub{margin:0 0 14px;color:var(--muted);max-width:70ch}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+/* düğüm seçici */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:3px;gap:3px}
+.seg button{font:600 14px/1.2 var(--font-body);color:var(--muted);background:transparent;border:0;border-radius:6px;padding:9px 14px;cursor:pointer;text-align:left}
+.seg button small{display:block;font:400 12px/1.3 var(--font-mono);color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+.seg button[aria-pressed="true"] small{color:var(--surface);opacity:.85}
+.seg button:focus-visible,tr[tabindex]:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* şema */
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.scroll{overflow-x:auto}
+#wiring{display:block;width:100%;min-width:760px;height:auto}
+figcaption{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;border-top:1px solid var(--line);padding:10px 16px;color:var(--muted);font-size:13px}
+figcaption b{color:var(--fg)}
+#wiring .net{transition:opacity .15s ease}
+#wiring.focus .net:not(.on){opacity:.13}
+#wiring .net.on .w{stroke-width:4.6}
+#wiring .net{cursor:pointer}
+.pcb{fill:var(--pcb);stroke:var(--pcb-edge);stroke-width:2}
+.pcb-ink{fill:var(--pcb-ink)}
+.trace{fill:none;stroke:var(--pcb-ink);stroke-width:2;opacity:.75}
+.can{fill:var(--can);stroke:var(--can-edge);stroke-width:1.5}
+.can-ink{fill:var(--can-ink)}
+.mod{fill:var(--mod);stroke:var(--mod-edge);stroke-width:1.5}
+.mod-ink{fill:var(--mod-ink)}
+.lbl{fill:var(--fg)}
+.muted{fill:var(--muted)}
+.pad{fill:var(--pad);stroke:var(--pcb-edge);stroke-width:1}
+.hdr{fill:var(--pad)}
+.res{fill:var(--surface);stroke:var(--fg);stroke-width:1.6}
+.plate{stroke:var(--fg);stroke-width:2.6;stroke-linecap:butt}
+.nc{stroke:var(--muted);stroke-width:2;stroke-linecap:round}
+.antenna{stroke:var(--mod);stroke-width:9;stroke-linecap:round}
+.usb{fill:var(--can);stroke:var(--can-edge);stroke-width:1.2}
+.cable{fill:none;stroke:var(--muted);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.ghost{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:6 5}
+.holder{fill:var(--holder)}
+.cell{fill:var(--cell);stroke:var(--can-edge);stroke-width:1}
+.cell-ink{fill:var(--cell-ink)}
+.dht{fill:var(--dht);stroke:var(--can-edge);stroke-width:1}
+.slot{stroke:var(--mod);stroke-width:2.5;stroke-linecap:round}
+.mesh{fill:none;stroke:var(--can-edge);stroke-width:1.2;stroke-dasharray:2 3}
+.led{fill:var(--led)}
+.btn{fill:var(--can-edge)}
+.flag-ink{fill:var(--flag-ink)}
+.w{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.gs{fill:none;stroke-width:2.2;stroke-linecap:round}
+text{font-family:'IBM Plex Mono',ui-monospace,'DejaVu Sans Mono',Consolas,monospace}
+.sans{font-family:'IBM Plex Sans','DejaVu Sans','Segoe UI',Roboto,sans-serif}
+.t10{font-size:10.5px}.t11{font-size:11px}.t12{font-size:12px}.t13{font-size:13px}.t15{font-size:15px}
+.b{font-weight:600}
+.s-v5{stroke:var(--w-v5)}.f-v5{fill:var(--w-v5)}
+.s-v33{stroke:var(--w-v33)}.f-v33{fill:var(--w-v33)}
+.s-gnd{stroke:var(--w-gnd)}.f-gnd{fill:var(--w-gnd)}
+.s-ce{stroke:var(--w-ce)}.f-ce{fill:var(--w-ce)}
+.s-csn{stroke:var(--w-csn)}.f-csn{fill:var(--w-csn)}
+.s-sck{stroke:var(--w-sck)}.f-sck{fill:var(--w-sck)}
+.s-mosi{stroke:var(--w-mosi)}.f-mosi{fill:var(--w-mosi)}
+.s-miso{stroke:var(--w-miso)}.f-miso{fill:var(--w-miso)}
+.s-dht{stroke:var(--w-dht)}.f-dht{fill:var(--w-dht)}
+.s-mq{stroke:var(--w-mq)}.f-mq{fill:var(--w-mq)}
+.s-buz{stroke:var(--w-buz)}.f-buz{fill:var(--w-buz)}
+
+/* varyantlar */
+#page[data-node="f1"] .only-f2,#page[data-node="f2"] .only-f1{display:none}
+
+/* tablo */
+.table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:14px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{font:600 12px/1.3 var(--font-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--chip)}
+tbody th{font-weight:600;white-space:nowrap}
+tbody tr:last-child th,tbody tr:last-child td{border-bottom:0}
+tbody tr[data-net]{cursor:pointer}
+tbody tr.on{background:var(--hl)}
+tr.aux th{font-weight:400;color:var(--muted)}
+td.note{color:var(--muted);min-width:240px}
+.sw{display:inline-block;width:22px;height:6px;border-radius:3px;background:var(--c);margin-right:10px;vertical-align:middle}
+.sw-none{background:transparent;border:1px dashed var(--line);height:4px}
+
+/* alt bölümler */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:28px;align-items:start}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.card h3{font:700 16px/1.25 var(--font-display);margin:0}
+.chain{font-family:var(--font-mono);font-size:13px;background:var(--chip);border-radius:6px;padding:8px 10px;overflow-x:auto;white-space:nowrap}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.warn{border-left:3px solid var(--warn);background:var(--warn-bg);border-radius:0 8px 8px 0;padding:10px 14px;font-size:14px}
+.warn b{color:var(--warn)}
+.budget{width:100%;min-width:0;font-size:13.5px}
+.budget td,.budget th{padding:6px 10px}
+.budget td:not(:first-child),.budget th:not(:first-child){text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.budget tr.total td{font-weight:600;color:var(--fg)}
+.parts li b{font-family:var(--font-mono);font-weight:600}
+.check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.check li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)}
+.check li:last-child{border-bottom:0}
+.check input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex:none}
+.check label{cursor:pointer}
+.check input:checked + label{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--muted)}
+.progress{display:flex;align-items:center;gap:10px;font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+.bar{flex:1;height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.sound{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}
+.sound dt{font-family:var(--font-mono);font-weight:600;white-space:nowrap}
+.sound dd{margin:0;color:var(--muted)}
+.btn-text{font:600 13px var(--font-body);color:var(--accent);background:none;border:0;padding:0;cursor:pointer;align-self:flex-start}
+@media (prefers-reduced-motion: reduce){#wiring .net,.bar i{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="page" data-node="f1">
+  <header>
+    <div>
+      <p class="eyebrow">Orman yangını erken uyarı mesh ağı · donanım</p>
+      <h1>F1 ve F2 kablolama şeması</h1>
+      <p class="lede">İki düğüm birebir aynı kablolanır, yalnızca besleme farklıdır. Bir kablonun ya da tablo satırının üzerine gelin: o hat ve iki ucu birlikte vurgulanır. Tıklarsanız vurgu sabit kalır.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Düğüm seçimi">
+      <button type="button" id="btn-f1" data-node="f1" aria-pressed="true">F1 · saha düğümü<small>ESP32-S · 4×AA</small></button>
+      <button type="button" id="btn-f2" data-node="f2" aria-pressed="false">F2 · köprü<small>DevKit V1 · USB</small></button>
+    </div>
+  </header>
+
+  <figure>
+    <div class="scroll">
+      <svg id="wiring" viewBox="0 0 1040 830" role="img" aria-label="ESP32 kartının nRF24L01+PA+LNA, DHT11, MQ gaz sensörü ve buzzer ile bağlantı şeması. Sinyal hatları soldaki karttan sağdaki modüllere düz gider; güç bağlantıları etiket bayraklarıyla gösterilir.">
+<rect class="pcb" x="190" y="40" width="240" height="740" rx="12"/>
+<path class="trace" d="M238 66 v-14 h18 v14 h18 v-14 h18 v14 h18 v-14 h18 v14 h18 v-14 h18 v14 h18 v-14"/>
+<rect class="can" x="232" y="82" width="156" height="104" rx="4"/>
+<text class="only-f1 can-ink t12 b" x="310" y="132" text-anchor="middle">ESP-32S</text>
+<text class="only-f2 can-ink t12 b" x="310" y="132" text-anchor="middle">ESP-WROOM-32</text>
+<text class="can-ink t10" x="310" y="150" text-anchor="middle">Wi-Fi kapalı · 3.3 V</text>
+<text class="only-f1 pcb-ink t15 b sans" x="310" y="222" text-anchor="middle">ESP32-S</text>
+<text class="only-f2 pcb-ink t15 b sans" x="310" y="222" text-anchor="middle">ESP32 DEVKIT V1</text>
+<text class="only-f1 pcb-ink t11" x="310" y="241" text-anchor="middle">F1 · saha düğümü</text>
+<text class="only-f2 pcb-ink t11" x="310" y="241" text-anchor="middle">F2 · köprü</text>
+<text class="only-f1 pcb-ink t12 b" x="204" y="304" text-anchor="start">5V</text>
+<text class="only-f2 pcb-ink t12 b" x="204" y="304" text-anchor="start">VIN</text>
+<text class="only-f1 pcb-ink t12 b" x="204" y="344" text-anchor="start">GND</text>
+<text class="only-f2 pcb-ink t12 b" x="204" y="344" text-anchor="start">GND</text>
+<text class="only-f1 pcb-ink t12 b" x="204" y="384" text-anchor="start">3V3</text>
+<text class="only-f2 pcb-ink t12 b" x="204" y="384" text-anchor="start">3V3</text>
+<text class="pcb-ink t12" x="416" y="294" text-anchor="end"><tspan class="b">GPIO4</tspan><tspan class="only-f2" dx="6">D4</tspan><tspan class="only-f1" dx="6">P4</tspan></text>
+<text class="pcb-ink t12" x="416" y="324" text-anchor="end"><tspan class="b">GPIO5</tspan><tspan class="only-f2" dx="6">D5</tspan><tspan class="only-f1" dx="6">P5</tspan></text>
+<text class="pcb-ink t12" x="416" y="354" text-anchor="end"><tspan class="b">GPIO18</tspan><tspan class="only-f2" dx="6">D18</tspan><tspan class="only-f1" dx="6">P18</tspan></text>
+<text class="pcb-ink t12" x="416" y="384" text-anchor="end"><tspan class="b">GPIO23</tspan><tspan class="only-f2" dx="6">D23</tspan><tspan class="only-f1" dx="6">P23</tspan></text>
+<text class="pcb-ink t12" x="416" y="414" text-anchor="end"><tspan class="b">GPIO19</tspan><tspan class="only-f2" dx="6">D19</tspan><tspan class="only-f1" dx="6">P19</tspan></text>
+<text class="pcb-ink t12" x="416" y="514" text-anchor="end"><tspan class="b">GPIO27</tspan><tspan class="only-f2" dx="6">D27</tspan><tspan class="only-f1" dx="6">P27</tspan></text>
+<text class="pcb-ink t12" x="416" y="604" text-anchor="end"><tspan class="b">GPIO34</tspan><tspan class="only-f2" dx="6">D34</tspan><tspan class="only-f1" dx="6">P34</tspan></text>
+<text class="pcb-ink t12" x="416" y="719" text-anchor="end"><tspan class="b">GPIO25</tspan><tspan class="only-f2" dx="6">D25</tspan><tspan class="only-f1" dx="6">P25</tspan></text>
+<rect class="btn" x="208" y="726" width="34" height="18" rx="3"/>
+<text class="only-f2 pcb-ink t10" x="225" y="760" text-anchor="middle">BOOT</text>
+<text class="only-f1 pcb-ink t10" x="225" y="760" text-anchor="middle">BOOT·test</text>
+<rect class="btn" x="384" y="726" width="30" height="18" rx="3"/>
+<text class="pcb-ink t10" x="399" y="760" text-anchor="middle">EN</text>
+<circle class="led" cx="345" cy="735" r="5"/>
+<text class="pcb-ink t10" x="345" y="760" text-anchor="middle">LED·2</text>
+<rect class="usb" x="286" y="770" width="48" height="22" rx="3"/>
+<text class="can-ink t10 b" x="310" y="785" text-anchor="middle">USB</text>
+<text class="lbl t12 b sans" x="620" y="258" text-anchor="start">nRF24L01+ PA+LNA</text>
+<line class="antenna" x1="785" y1="262" x2="785" y2="196"/>
+<rect class="usb" x="776" y="260" width="18" height="12" rx="2"/>
+<text class="muted t11" x="799" y="214" text-anchor="start">anten</text>
+<rect class="mod" x="620" y="270" width="180" height="180" rx="5"/>
+<rect class="can" x="684" y="304" width="74" height="90" rx="3"/>
+<text class="can-ink t10 b" x="721" y="345" text-anchor="middle">PA/LNA</text>
+<text class="can-ink t10" x="721" y="360" text-anchor="middle">RFX2401C</text>
+<text class="mod-ink t11" x="632" y="294" text-anchor="start">CE</text>
+<text class="mod-ink t11" x="632" y="324" text-anchor="start">CSN</text>
+<text class="mod-ink t11" x="632" y="354" text-anchor="start">SCK</text>
+<text class="mod-ink t11" x="632" y="384" text-anchor="start">MOSI</text>
+<text class="mod-ink t11" x="632" y="414" text-anchor="start">MISO</text>
+<text class="mod-ink t11" x="632" y="439" text-anchor="start">IRQ</text>
+<text class="mod-ink t11" x="792" y="304" text-anchor="end">VCC</text>
+<text class="mod-ink t11" x="792" y="424" text-anchor="end">GND</text>
+<text class="lbl t12 b sans" x="620" y="474" text-anchor="start">DHT11 · 0–50 °C</text>
+<rect class="mod" x="620" y="482" width="140" height="60" rx="5"/>
+<rect class="dht" x="668" y="488" width="50" height="48" rx="3"/>
+<line class="slot" x1="676" y1="498" x2="710" y2="498"/>
+<line class="slot" x1="676" y1="507" x2="710" y2="507"/>
+<line class="slot" x1="676" y1="516" x2="710" y2="516"/>
+<line class="slot" x1="676" y1="525" x2="710" y2="525"/>
+<text class="mod-ink t11" x="632" y="514" text-anchor="start">DATA</text>
+<text class="mod-ink t11" x="752" y="500" text-anchor="end">VCC</text>
+<text class="mod-ink t11" x="752" y="532" text-anchor="end">GND</text>
+<text class="lbl t12 b sans" x="620" y="564" text-anchor="start">MQ gaz sensörü</text>
+<rect class="mod" x="620" y="572" width="200" height="96" rx="5"/>
+<circle class="can" cx="712" cy="620" r="30"/>
+<circle class="mesh" cx="712" cy="620" r="21"/>
+<circle class="mesh" cx="712" cy="620" r="12"/>
+<text class="mod-ink t11" x="632" y="604" text-anchor="start">AO</text>
+<text class="mod-ink t11" x="632" y="644" text-anchor="start">DO</text>
+<text class="mod-ink t11" x="812" y="594" text-anchor="end">VCC</text>
+<text class="mod-ink t11" x="812" y="654" text-anchor="end">GND</text>
+<text class="lbl t12 b sans" x="620" y="688" text-anchor="start">Buzzer (aktif)</text>
+<rect class="mod" x="620" y="696" width="140" height="50" rx="5"/>
+<circle class="can" cx="690" cy="721" r="16"/>
+<circle class="mod" cx="690" cy="721" r="4"/>
+<text class="mod-ink t11" x="632" y="719" text-anchor="start">S</text>
+<text class="mod-ink t11" x="752" y="734" text-anchor="end">GND</text>
+<rect class="only-f1 holder" x="36" y="56" width="100" height="200" rx="6"/>
+<rect class="only-f1 cell" x="46" y="66" width="80" height="36" rx="8"/>
+<text class="only-f1 cell-ink t11 b" x="86" y="89" text-anchor="middle">1.5 V AA</text>
+<text class="only-f1 cell-ink t12 b" x="54" y="89" text-anchor="middle">+</text>
+<rect class="only-f1 cell" x="46" y="112" width="80" height="36" rx="8"/>
+<text class="only-f1 cell-ink t11 b" x="86" y="135" text-anchor="middle">1.5 V AA</text>
+<text class="only-f1 cell-ink t12 b" x="118" y="135" text-anchor="middle">+</text>
+<rect class="only-f1 cell" x="46" y="158" width="80" height="36" rx="8"/>
+<text class="only-f1 cell-ink t11 b" x="86" y="181" text-anchor="middle">1.5 V AA</text>
+<text class="only-f1 cell-ink t12 b" x="54" y="181" text-anchor="middle">+</text>
+<rect class="only-f1 cell" x="46" y="204" width="80" height="36" rx="8"/>
+<text class="only-f1 cell-ink t11 b" x="86" y="227" text-anchor="middle">1.5 V AA</text>
+<text class="only-f1 cell-ink t12 b" x="118" y="227" text-anchor="middle">+</text>
+<text class="only-f1 lbl t11 b" x="86" y="47" text-anchor="middle">4×AA seri · 6.0→4.4 V</text>
+<text class="only-f1 muted t11" x="310" y="820" text-anchor="middle">USB yalnızca yükleme için — yüklerken pilleri çıkarın</text>
+<rect class="only-f2 ghost" x="36" y="56" width="100" height="200" rx="6"/>
+<text class="only-f2 lbl t12 b" x="86" y="150" text-anchor="middle">PİL YOK</text>
+<text class="only-f2 muted t11" x="86" y="168" text-anchor="middle">USB'den</text>
+<text class="only-f2 muted t11" x="86" y="183" text-anchor="middle">beslenir</text>
+<polyline class="only-f2 cable" points="310,792 310,812 86,812 86,708"/>
+<rect class="only-f2 usb" x="40" y="640" width="92" height="60" rx="4"/>
+<rect class="only-f2 mod" x="48" y="648" width="76" height="44" rx="2"/>
+<text class="only-f2 mod-ink t12 b" x="86" y="674" text-anchor="middle">PC</text>
+<text class="only-f2 muted t11" x="200" y="806" text-anchor="middle">USB · 5 V + seri veri</text>
+<g class="net" data-net="v5"><polyline class="w s-v5" points="190,300 150,300"/><polygon class="f-v5" points="150,300 141,289 104,289 104,311 141,311"/><text class="flag-ink t11 b" x="122.5" y="304" text-anchor="middle">5V</text><circle class="pad" cx="190" cy="300" r="4.5"/><polyline class="w s-v5" points="820,590 860,590"/><polygon class="f-v5" points="860,590 869,579 906,579 906,601 869,601"/><text class="flag-ink t11 b" x="887.5" y="594" text-anchor="middle">5V</text><rect class="hdr" x="816" y="586" width="8" height="8"/></g>
+<g class="net only-f1" data-net="v5"><polyline class="w s-v5" points="136,74 176,74 176,300 190,300"/><circle class="f-v5" cx="176" cy="300" r="4.2"/><text class="lbl t12 b" x="142" y="70">+</text></g>
+<g class="net" data-net="v33"><polyline class="w s-v33" points="190,380 150,380"/><polygon class="f-v33" points="150,380 141,369 100,369 100,391 141,391"/><text class="flag-ink t11 b" x="120.5" y="384" text-anchor="middle">3V3</text><circle class="pad" cx="190" cy="380" r="4.5"/><polyline class="w s-v33" points="800,300 975,300"/><polygon class="f-v33" points="975,300 984,289 1029,289 1029,311 984,311"/><text class="flag-ink t11 b" x="1006.5" y="304" text-anchor="middle">3V3</text><rect class="hdr" x="796" y="296" width="8" height="8"/><polyline class="w s-v33" points="860,300 860,350"/><circle class="f-v33" cx="860" cy="300" r="4.2"/><line class="plate" x1="846" y1="350" x2="874" y2="350"/><path class="plate" d="M846 362 Q860 354 874 362" fill="none"/><text class="lbl t11 b" x="878" y="346">+</text><polyline class="w s-gnd" points="860,360 860,420"/><circle class="f-gnd" cx="860" cy="420" r="4.2"/><polyline class="w s-v33" points="920,300 920,350"/><circle class="f-v33" cx="920" cy="300" r="4.2"/><line class="plate" x1="906" y1="350" x2="934" y2="350"/><line class="plate" x1="906" y1="358" x2="934" y2="358"/><polyline class="w s-gnd" points="920,358 920,420"/><circle class="f-gnd" cx="920" cy="420" r="4.2"/><text class="lbl t11" x="866" y="392">47 µF</text><text class="lbl t11" x="926" y="392">100 nF</text><polyline class="w s-v33" points="760,496 800,496"/><polygon class="f-v33" points="800,496 809,485 854,485 854,507 809,507"/><text class="flag-ink t11 b" x="831.5" y="500" text-anchor="middle">3V3</text><rect class="hdr" x="756" y="492" width="8" height="8"/></g>
+<g class="net" data-net="gnd"><polyline class="w s-gnd" points="190,340 160,340"/><circle class="f-gnd" cx="160" cy="340" r="4.2"/><g class="gs s-gnd"><line x1="160" y1="340" x2="160" y2="350"/><line x1="149" y1="350" x2="171" y2="350"/><line x1="153" y1="355" x2="167" y2="355"/><line x1="157" y1="360" x2="163" y2="360"/></g><circle class="pad" cx="190" cy="340" r="4.5"/><polyline class="w s-gnd" points="800,420 975,420"/><g class="gs s-gnd"><line x1="975" y1="420" x2="975" y2="430"/><line x1="964" y1="430" x2="986" y2="430"/><line x1="968" y1="435" x2="982" y2="435"/><line x1="972" y1="440" x2="978" y2="440"/></g><rect class="hdr" x="796" y="416" width="8" height="8"/><polyline class="w s-gnd" points="760,528 790,528"/><g class="gs s-gnd"><line x1="790" y1="528" x2="790" y2="538"/><line x1="779" y1="538" x2="801" y2="538"/><line x1="783" y1="543" x2="797" y2="543"/><line x1="787" y1="548" x2="793" y2="548"/></g><rect class="hdr" x="756" y="524" width="8" height="8"/><polyline class="w s-gnd" points="820,650 850,650"/><g class="gs s-gnd"><line x1="850" y1="650" x2="850" y2="660"/><line x1="839" y1="660" x2="861" y2="660"/><line x1="843" y1="665" x2="857" y2="665"/><line x1="847" y1="670" x2="853" y2="670"/></g><rect class="hdr" x="816" y="646" width="8" height="8"/><polyline class="w s-gnd" points="760,730 790,730"/><g class="gs s-gnd"><line x1="790" y1="730" x2="790" y2="740"/><line x1="779" y1="740" x2="801" y2="740"/><line x1="783" y1="745" x2="797" y2="745"/><line x1="787" y1="750" x2="793" y2="750"/></g><rect class="hdr" x="756" y="726" width="8" height="8"/></g>
+<g class="net only-f1" data-net="gnd"><polyline class="w s-gnd" points="136,240 160,240 160,340"/><text class="lbl t12 b" x="142" y="236">−</text></g>
+<g class="net" data-net="ce"><circle class="pad" cx="430" cy="290" r="4.5"/><rect class="hdr" x="616" y="286" width="8" height="8"/><polyline class="w s-ce" points="430,290 620,290"/><text class="muted t11" x="446" y="283">CE</text><polygon class="f-ce" points="570,285 580,290 570,295"/></g>
+<g class="net" data-net="csn"><circle class="pad" cx="430" cy="320" r="4.5"/><rect class="hdr" x="616" y="316" width="8" height="8"/><polyline class="w s-csn" points="430,320 620,320"/><text class="muted t11" x="446" y="313">CSN</text><polygon class="f-csn" points="570,315 580,320 570,325"/></g>
+<g class="net" data-net="sck"><circle class="pad" cx="430" cy="350" r="4.5"/><rect class="hdr" x="616" y="346" width="8" height="8"/><polyline class="w s-sck" points="430,350 620,350"/><text class="muted t11" x="446" y="343">SCK</text><polygon class="f-sck" points="570,345 580,350 570,355"/></g>
+<g class="net" data-net="mosi"><circle class="pad" cx="430" cy="380" r="4.5"/><rect class="hdr" x="616" y="376" width="8" height="8"/><polyline class="w s-mosi" points="430,380 620,380"/><text class="muted t11" x="446" y="373">MOSI</text><polygon class="f-mosi" points="570,375 580,380 570,385"/></g>
+<g class="net" data-net="miso"><circle class="pad" cx="430" cy="410" r="4.5"/><rect class="hdr" x="616" y="406" width="8" height="8"/><polyline class="w s-miso" points="430,410 620,410"/><text class="muted t11" x="446" y="403">MISO</text><polygon class="f-miso" points="580,405 570,410 580,415"/></g>
+<g class="net" data-net="dht"><circle class="pad" cx="430" cy="510" r="4.5"/><rect class="hdr" x="616" y="506" width="8" height="8"/><polyline class="w s-dht" points="430,510 620,510"/><text class="muted t11" x="446" y="503">DATA</text><polygon class="f-dht" points="566,510 572,505 572,515"/><polygon class="f-dht" points="584,510 578,505 578,515"/></g>
+<g class="net" data-net="mq"><circle class="pad" cx="430" cy="600" r="4.5"/><rect class="hdr" x="616" y="596" width="8" height="8"/><polyline class="w s-mq" points="430,600 520,600"/><circle class="f-mq" cx="520" cy="600" r="4.2"/><polyline class="w s-mq" points="520,600 545,600"/><rect class="res" x="545" y="593" width="40" height="14" rx="1"/><polyline class="w s-mq" points="585,600 620,600"/><text class="lbl t11 b" x="565" y="587" text-anchor="middle">R1 10 kΩ</text><polyline class="w s-mq" points="520,600 520,615"/><rect class="res" x="513" y="615" width="14" height="40" rx="1"/><polyline class="w s-gnd" points="520,655 520,672"/><g class="gs s-gnd"><line x1="520" y1="672" x2="520" y2="682"/><line x1="509" y1="682" x2="531" y2="682"/><line x1="513" y1="687" x2="527" y2="687"/><line x1="517" y1="692" x2="523" y2="692"/></g><text class="lbl t11 b" x="506" y="632" text-anchor="end">R2</text><text class="lbl t11" x="506" y="646" text-anchor="end">10 kΩ</text><text class="muted t11" x="446" y="591">AO÷2</text><polygon class="f-mq" points="497,595 487,600 497,605"/></g>
+<g class="net" data-net="buz"><circle class="pad" cx="430" cy="715" r="4.5"/><rect class="hdr" x="616" y="711" width="8" height="8"/><polyline class="w s-buz" points="430,715 620,715"/><text class="muted t11" x="446" y="708">S</text><polygon class="f-buz" points="570,710 580,715 570,720"/></g>
+<rect class="hdr" x="616" y="431" width="8" height="8"/><line class="nc" x1="599" y1="430" x2="609" y2="440"/><line class="nc" x1="599" y1="440" x2="609" y2="430"/><text class="muted t11" x="594" y="439" text-anchor="end">boş</text>
+<rect class="hdr" x="616" y="636" width="8" height="8"/><line class="nc" x1="599" y1="635" x2="609" y2="645"/><line class="nc" x1="599" y1="645" x2="609" y2="635"/><text class="muted t11" x="594" y="644" text-anchor="end">boş</text>
+      </svg>
+    </div>
+    <figcaption>
+      <span>Bayraklar aynı hattır: bütün <b>3V3</b> bayrakları karttaki 3V3 pinine, <b>5V</b> bayrakları <span class="only-f1">5V</span><span class="only-f2">VIN</span> pinine, ⏚ sembolleri GND'ye gider.</span>
+      <span class="mono">GPIO numarası esastır · kart yazısı: <span class="only-f1">P4 / IO4 / 4</span><span class="only-f2">D4</span></span>
+    </figcaption>
+  </figure>
+
+  <section aria-labelledby="h-pins">
+    <h2 id="h-pins">Pin tablosu</h2>
+    <p class="sub">Seçili kartın yazıları gösteriliyor: <b class="only-f1">ESP32-S (NodeMCU-32S)</b><b class="only-f2">ESP32 DevKit V1</b>. Satıra gelince şemada aynı hat vurgulanır.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Hat</th><th>Modül pini</th><th>ESP32</th><th>Kart yazısı</th><th>Not</th></tr></thead>
+        <tbody id="pin-rows">
+<tr data-net="v5" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-v5)"></span>5V hattı</th><td>MQ VCC</td><td class="mono">5V / VIN</td><td class="mono"><span class="only-f2">VIN</span><span class="only-f1">5V</span></td><td class="note">F1: 4×AA (+) bu pine. F2: USB'den gelir, pil bağlamayın.</td></tr>
+<tr data-net="v33" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-v33)"></span>3V3 hattı</th><td>nRF24 VCC · DHT11 VCC</td><td class="mono">3V3</td><td class="mono"><span class="only-f2">3V3</span><span class="only-f1">3V3</span></td><td class="note">nRF24 VCC–GND arasına 47 µF + 100 nF, modül pinlerinin dibine. Asla 5 V.</td></tr>
+<tr data-net="gnd" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-gnd)"></span>GND (ortak)</th><td>tüm GND'ler · C1/C2 (−) · R2</td><td class="mono">GND</td><td class="mono"><span class="only-f2">GND</span><span class="only-f1">GND</span></td><td class="note">Bütün toprak noktaları tek hatta birleşir. F1: pil (−) buraya.</td></tr>
+<tr data-net="ce" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-ce)"></span>CE</th><td>nRF24 CE</td><td class="mono">GPIO4</td><td class="mono"><span class="only-f2">D4</span><span class="only-f1">P4</span></td><td class="note"></td></tr>
+<tr data-net="csn" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-csn)"></span>CSN</th><td>nRF24 CSN</td><td class="mono">GPIO5</td><td class="mono"><span class="only-f2">D5</span><span class="only-f1">P5</span></td><td class="note"></td></tr>
+<tr data-net="sck" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-sck)"></span>SCK</th><td>nRF24 SCK</td><td class="mono">GPIO18</td><td class="mono"><span class="only-f2">D18</span><span class="only-f1">P18</span></td><td class="note">VSPI saat hattı</td></tr>
+<tr data-net="mosi" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-mosi)"></span>MOSI</th><td>nRF24 MOSI</td><td class="mono">GPIO23</td><td class="mono"><span class="only-f2">D23</span><span class="only-f1">P23</span></td><td class="note">ESP32 → modül</td></tr>
+<tr data-net="miso" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-miso)"></span>MISO</th><td>nRF24 MISO</td><td class="mono">GPIO19</td><td class="mono"><span class="only-f2">D19</span><span class="only-f1">P19</span></td><td class="note">Modül → ESP32. MOSI ile karıştırmayın.</td></tr>
+<tr data-net="dht" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-dht)"></span>DHT DATA</th><td>DHT11 DATA</td><td class="mono">GPIO27</td><td class="mono"><span class="only-f2">D27</span><span class="only-f1">P27</span></td><td class="note">3 bacaklı modülde pull-up var. Çıplak sensörde DATA–3V3 arası 10 kΩ.</td></tr>
+<tr data-net="mq" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-mq)"></span>MQ AO</th><td>MQ AO (bölücü üzerinden)</td><td class="mono">GPIO34</td><td class="mono"><span class="only-f2">D34</span><span class="only-f1">P34</span></td><td class="note">AO → R1 10 kΩ → GPIO34 → R2 10 kΩ → GND. DO pinini bağlamayın.</td></tr>
+<tr data-net="buz" tabindex="0"><th scope="row"><span class="sw" style="--c:var(--w-buz)"></span>Buzzer</th><td>Buzzer S / +</td><td class="mono">GPIO25</td><td class="mono"><span class="only-f2">D25</span><span class="only-f1">P25</span></td><td class="note">"Low level trigger" yazan modülde firmware'de BUZZER_ON_LEVEL LOW.</td></tr>
+<tr class="aux"><th scope="row"><span class="sw sw-none"></span>nRF24 IRQ</th><td>—</td><td class="mono">—</td><td class="mono"><span class="only-f2">—</span><span class="only-f1">—</span></td><td class="note">Boş bırakın.</td></tr>
+<tr class="aux"><th scope="row"><span class="sw sw-none"></span>Kart üstü LED</th><td>—</td><td class="mono">GPIO2</td><td class="mono"><span class="only-f2">LED</span><span class="only-f1">LED</span></td><td class="note">Bağlantı gerekmez; durum gösterir.</td></tr>
+<tr class="aux"><th scope="row"><span class="sw sw-none"></span>BOOT butonu</th><td>—</td><td class="mono">GPIO0</td><td class="mono"><span class="only-f2">BOOT</span><span class="only-f1">BOOT</span></td><td class="note">F1'de 1 s basılı tutun: test alarmı (10 s).</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section aria-labelledby="h-power">
+      <h2 id="h-power">Güç</h2>
+      <p class="sub">Kart üstü regülatör (AMS1117) yaklaşık 1.1 V düşürür: 3.3 V için girişte en az 4.4 V gerekir.</p>
+      <div class="cards">
+        <article class="card" id="card-f1">
+          <h3>F1 · 4×AA kalem pil</h3>
+          <div class="chain">4×AA (+) → 5V pini → regülatör → 3V3</div>
+          <dl class="kv">
+            <dt>Taze</dt><dd>6.0 V</dd>
+            <dt>Yarı ömür</dt><dd>≈ 5.0 V</dd>
+            <dt>Alt sınır</dt><dd>4.4 V</dd>
+            <dt>Tüketim</dt><dd>≈ 220 mA · tepe 350 mA</dd>
+            <dt>Süre</dt><dd>≈ 5–7 saat</dd>
+          </dl>
+          <ul class="plain">
+            <li>3 pil yetmez: yükte 4.0 V'a iner, kart resetlenir.</li>
+            <li>MQ ısıtıcısı taze pilde 6 V görür; demo için sorun değil. Daha doğrusu seri 1N4007 ya da 4×NiMH.</li>
+            <li>Yükleme yaparken pilleri çıkarın.</li>
+          </ul>
+        </article>
+        <article class="card" id="card-f2">
+          <h3>F2 · USB</h3>
+          <div class="chain">USB 5V → VIN → regülatör → 3V3</div>
+          <dl class="kv">
+            <dt>Kaynak</dt><dd>USB 2.0 · 500 mA</dd>
+            <dt>Tüketim</dt><dd>≈ 260–300 mA</dd>
+            <dt>Veri</dt><dd>115200 baud, JSON</dd>
+          </dl>
+          <ul class="plain">
+            <li>Pil bağlamayın: birçok klonda USB ile VIN arasında koruma diyotu yok.</li>
+            <li>Doğrudan dizüstü portuna takın, beslemesiz hub'a değil.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="warn" style="margin-top:14px"><b>Pil asla 3V3 pinine bağlanmaz.</b> 4×AA (6 V) ESP32'yi ve nRF24'ü yakar. Pil yalnızca 5V/VIN pinine gider.</div>
+      <h3 style="font:700 16px/1.3 var(--font-display);margin:20px 0 8px">Akım bütçesi</h3>
+      <div class="table-scroll">
+        <table class="budget">
+          <thead><tr><th>Yük</th><th>F1 tipik</th><th>F1 tepe</th><th>F2 tipik</th></tr></thead>
+          <tbody>
+            <tr><td>ESP32 (F1 80 MHz, Wi-Fi kapalı)</td><td>30 mA</td><td>50 mA</td><td>50 mA</td></tr>
+            <tr><td>nRF24L01+PA+LNA</td><td>&lt; 1 mA</td><td>40–115 mA</td><td>45 mA</td></tr>
+            <tr><td>MQ ısıtıcısı</td><td>150–180 mA</td><td>180 mA</td><td>150 mA</td></tr>
+            <tr><td>DHT11</td><td>1 mA</td><td>2.5 mA</td><td>1 mA</td></tr>
+            <tr><td>Buzzer (alarmda)</td><td>0</td><td>30 mA</td><td>0</td></tr>
+            <tr><td>Kart LED'leri + regülatör</td><td>10 mA</td><td>10 mA</td><td>10 mA</td></tr>
+            <tr class="total"><td>Toplam</td><td>≈ 220 mA</td><td>≈ 350 mA</td><td>≈ 260–300 mA</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-check" style="display:flex;flex-direction:column;gap:28px">
+      <div>
+        <h2 id="h-check">Güç vermeden önce</h2>
+        <p class="sub">İşaretler yalnızca bu tarayıcıda saklanır.</p>
+        <div class="card">
+          <div class="progress"><span id="prog-text">0 / 9</span><div class="bar"><i id="prog-bar"></i></div></div>
+          <ul class="check" id="checklist">
+<li><input type="checkbox" id="c1"><label for="c1">nRF24 VCC → <b>3V3</b> (VIN/5V değil)</label></li>
+<li><input type="checkbox" id="c2"><label for="c2">nRF24 VCC–GND arasında kondansatör; şeritli bacak GND'de</label></li>
+<li><input type="checkbox" id="c3"><label for="c3">Anten takılı</label></li>
+<li><input type="checkbox" id="c4"><label for="c4">CE=GPIO4, CSN=GPIO5 ters değil · MOSI=GPIO23, MISO=GPIO19 ters değil</label></li>
+<li><input type="checkbox" id="c5"><label for="c5">MQ AO → 10 kΩ / 10 kΩ bölücü → GPIO34; DO boş</label></li>
+<li><input type="checkbox" id="c6"><label for="c6">Bütün GND'ler ortak</label></li>
+<li><input type="checkbox" id="c7"><label for="c7">F1: pil (+) → 5V, (−) → GND · yükleme sırasında piller çıkarılmış</label></li>
+<li><input type="checkbox" id="c8"><label for="c8">F2: pil yok, yalnızca USB</label></li>
+<li><input type="checkbox" id="c9"><label for="c9">İki karta aynı firmware sürümü yüklendi (kanal 78, adres OYMA1)</label></li>
+          </ul>
+          <button type="button" class="btn-text" id="reset-checks">İşaretleri temizle</button>
+        </div>
+      </div>
+      <div>
+        <h2>Stoka ek gerekenler</h2>
+        <ul class="plain parts">
+          <li><b>2× 47–100 µF</b> elektrolitik, ≥ 10 V — her nRF24'e bir tane</li>
+          <li><b>2× 100 nF</b> seramik (104)</li>
+          <li><b>4× 10 kΩ</b> — her MQ için gerilim bölücü</li>
+          <li>İsteğe bağlı: 10 kΩ DHT pull-up · 1N4007 · BC547 + 1 kΩ (kısık buzzer için) · pil anahtarı</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Sesli ve ışıklı teşhis</h2>
+        <dl class="sound">
+          <dt>1 bip</dt><dd>Açılış tamam, radyo bulundu</dd>
+          <dt>3 bip</dt><dd>nRF24 yok: besleme, CE/CSN, MISO/MOSI, kondansatör</dd>
+          <dt>F2: 2 bip</dt><dd>F1'in alarmı kablosuz olarak geldi</dd>
+          <dt>LED yavaş</dt><dd>MQ ısınıyor (ilk 45 s gaz alarmı yok)</dd>
+          <dt>LED kısa flaş</dt><dd>Paket teslim edildi</dd>
+          <dt>LED çift flaş</dt><dd>Radyo yok</dd>
+          <dt>LED hızlı</dt><dd>Alarm</dd>
+        </dl>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const page = document.getElementById('page');
+  const svg = document.getElementById('wiring');
+  const nets = [...svg.querySelectorAll('.net')];
+  const rows = [...document.querySelectorAll('#pin-rows tr[data-net]')];
+  let sticky = null;
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* depolama yok */ } },
+  };
+
+  function focusNet(net) {
+    svg.classList.toggle('focus', !!net);
+    nets.forEach(g => g.classList.toggle('on', g.dataset.net === net));
+    rows.forEach(r => r.classList.toggle('on', r.dataset.net === net));
+  }
+  const hover = net => { if (!sticky) focusNet(net); };
+  const leave = () => focusNet(sticky);
+  const toggle = net => { sticky = sticky === net ? null : net; focusNet(sticky); };
+
+  nets.forEach(g => {
+    g.addEventListener('mouseenter', () => hover(g.dataset.net));
+    g.addEventListener('mouseleave', leave);
+    g.addEventListener('click', () => toggle(g.dataset.net));
+  });
+  rows.forEach(r => {
+    r.addEventListener('mouseenter', () => hover(r.dataset.net));
+    r.addEventListener('mouseleave', leave);
+    r.addEventListener('focus', () => hover(r.dataset.net));
+    r.addEventListener('blur', leave);
+    r.addEventListener('click', () => toggle(r.dataset.net));
+    r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(r.dataset.net); } });
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { sticky = null; focusNet(null); } });
+
+  function setNode(node) {
+    page.dataset.node = node;
+    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.node === node)));
+    document.getElementById('card-f1').classList.toggle('sel', node === 'f1');
+    document.getElementById('card-f2').classList.toggle('sel', node === 'f2');
+    store.set('orman-kablo-node', node);
+  }
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => setNode(b.dataset.node)));
+  setNode(store.get('orman-kablo-node') === 'f2' ? 'f2' : 'f1');
+
+  const boxes = [...document.querySelectorAll('#checklist input')];
+  function progress() {
+    const n = boxes.filter(b => b.checked).length;
+    document.getElementById('prog-text').textContent = n + ' / ' + boxes.length;
+    document.getElementById('prog-bar').style.width = (100 * n / boxes.length) + '%';
+  }
+  boxes.forEach(b => {
+    b.checked = store.get('orman-kablo-' + b.id) === '1';
+    b.addEventListener('change', () => { store.set('orman-kablo-' + b.id, b.checked ? '1' : '0'); progress(); });
+  });
+  document.getElementById('reset-checks').addEventListener('click', () => {
+    boxes.forEach(b => { b.checked = false; store.set('orman-kablo-' + b.id, '0'); });
+    progress();
+  });
+  progress();
+})();
+</script>
+
+</body>
+</html>
