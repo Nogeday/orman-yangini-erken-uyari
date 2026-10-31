@@ -363,6 +363,6 @@ dağıtılır. Harita karoları depoda yer almaz.
 
 | Ad | Rol |
 |---|---|
-| _(ad soyad)_ | Donanım ve firmware |
-| _(ad soyad)_ | Simülasyon ve arayüz |
-| _(ad soyad)_ | Sunum ve saha senaryosu |
+| _(Saim Burak Bayır)_ | Donanım ve firmware |
+| _(Oğuzhan Okur)_ | Simülasyon ve arayüz |
+
